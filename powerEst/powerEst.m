@@ -5,7 +5,7 @@ function [ P ] = powerEst( signal )
 %       - signal: the signal to be analysed
 %   @output:
 %       - P: 1X25 vectors with the power corresponding to the center 
-%               frequencies -12, -11, -10, ..., 12
+%               frequencies 0, ..., 12, -12, -11, ..., -1
 
 N_window=25;
 %fs=1/0.05;
