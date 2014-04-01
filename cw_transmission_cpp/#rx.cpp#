@@ -258,14 +258,16 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     //Process the received data
 
 
-    short tp =  powerTotArray( storage_short, 2*total_num_samps);
+    short tp =  powerTotArray( storage_short, total_num_samps);
 
     std::cout << "Total power" << tp << "\nDone!\n";
 
 
     std::complex<short> * comp_rec=(std::complex<short> *) storage_short;
 
-   
+    // std::cout<<"Cast"<<comp_rec[total_num_samps-1]<<"\n";
+    
+    // itpp::vec rec=itpp::zeros(
 
 
     return 0;
