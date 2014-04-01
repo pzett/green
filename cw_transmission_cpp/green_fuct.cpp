@@ -24,11 +24,14 @@ void square_elements_of_array(float data_to_harness[],int no_elements) {
   };
 };
 
-/** Short description
+/** Generate a continuous waveform
  * @pre:
- * 
+ *    - buffer: pointer to the array of short that will contains the datas
+ *    - total_num_samps: length of the buffer
+ *    - nfreq: the normalized frequency of the continuous wave
+ *    - Amp: the ampllitude (RMS lower the 5000)
  * @post:
- *
+ *    - buffer now contains the continuous wave
  */
 void create_data_CW (short *buffer, int total_num_samps, float nfreq, float Amp )
 {
