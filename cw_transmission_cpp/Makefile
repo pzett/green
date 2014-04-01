@@ -1,6 +1,6 @@
 #==============================================================
-CXXFLAGS = -o3 -Wall -DNDEBUG
-LDLIBS = -luhd -lboost_program_options
+CXXFLAGS = -o3 -Wall -DNDEBUG `itpp-config --cflags`
+LDLIBS = -luhd -lboost_program_options `itpp-config --libs`
 
 #==============================================================
 
