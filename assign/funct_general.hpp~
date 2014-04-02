@@ -1,0 +1,15 @@
+// GREEN CW Transmission
+
+
+#include <iostream>
+#include <complex>
+
+
+
+using namespace std;
+
+void square_elements_of_array(float data_to_harness[],int no_elements) ;
+
+void create_data_CW (short buffer[], int total_num_samps, float nfreq, float Amp );
+
+short powerTotArray( short data[], int no_elements);
