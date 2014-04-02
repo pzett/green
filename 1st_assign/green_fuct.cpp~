@@ -1,0 +1,38 @@
+// GREEN CW Transmission
+
+#include <iostream>
+#include <cstdio>
+#include <complex>
+
+
+
+using namespace std;
+
+
+void square_elements_of_array(float data_to_harness[],int no_elements) {
+  for (int i1=0;i1<no_elements;i1++) {
+    data_to_harness[i1]=data_to_harness[i1]*data_to_harness[i1];
+  };
+};
+
+
+void create_data_CW (float buffer[], int total_num_samps, float nfreq, float Amp )
+{
+  float r,i;
+  for (int i1=0;i1<total_num_samps;i1++) {
+    if(i1%2==0){
+      r=Amp*cos(2*3.1415926*nfreq*i1);
+      buffer[i1] = r;
+
+    }
+    if(i1%2!=0){
+      i=Amp*sin(2*3.1415926*nfreq*i1);
+      buffer[i1] = i;
+    }
+    
+      
+  };
+
+};
+
+
