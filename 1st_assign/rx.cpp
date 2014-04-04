@@ -36,6 +36,8 @@
 // #include <itpp/itsignal.h>
 
 #include "funct_general.hpp"
+#include "rx_funct.cpp"
+
 
 namespace po = boost::program_options;
 
@@ -274,11 +276,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
     float P=powerTotArray( storage_short, 2*total_num_samps);
 
-    std::cout << "Total power=" << P <<"\n";
+    std::cout << "\nTotal power=" << P <<"\n";
 
-    for(int ii=(int)(2*total_num_samps)-10; ii< (int)(2*total_num_samps)+1; ii++){
-        std::cout << storage_short[ii]<< "->value \n";
-    };
+    // for(int ii=(int)(2*total_num_samps)-10; ii< (int)(2*total_num_samps)+1; ii++){
+    //     std::cout << storage_short[ii]<< "->value \n";
+    // };
 
     std::ofstream s1(filename.c_str(), std::ios::binary);   
 
@@ -321,26 +323,34 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
        //stream_cmd.time_spec = uhd::time_spec_t(seconds_in_future);
        dev->issue_stream_cmd(stream_cmd);
        
-       total_num_samps=rx_rate; //so that we calculate power every each second
+       total_num_samps=50000; //so that we calculate power every each second
        
-       free(storage_short);
-
-       storage_short=new short[2*total_num_samps];
+       
        
        size_t num_rx_samps_latest_call;
        size_t num_rx_samps;
        float tp;
+       float Power=0;
       
        uhd::rx_metadata_t md;
        int i1,i2;
        
-       //int ola=0;
+       int sec_count=0;
+       int one_sec=rx_rate/((int)buffer_size);
+
+       float mean[2];
+       short * buff_short_nomean;
+       buff_short_nomean=new short[2*buffer_size];
        
        while(1){
 
+	 free(storage_short);
+
+	 storage_short=new short[2*total_num_samps];
+
 	    num_rx_samps=0;
 	    
-	    std::cout<<"buffer:"<<buffer_size<<"\n";
+	    //std::cout<<"buffer:"<<buffer_size<<"\n";
 	    
 	    
 	    while (num_rx_samps<total_num_samps) {
@@ -353,12 +363,23 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 		 
 	      };
 	      
-	      if (num_rx_samps_latest_call!=buffer_size)  {
-	      	std::cerr << "I expect the buffer size to be always the same!\n";
-		std::cout<<"buffer:"<<buffer_size<<"\n";
-		std::cout<<"last:"<<num_rx_samps_latest_call<<"\n";
-	      	exit(1); 
-	      };
+	       if (num_rx_samps_latest_call!=buffer_size)  {
+	       	std::cerr << "I expect the buffer size to be always the same!\n";
+	       	std::cout<<"buffer:"<<buffer_size<<"\n";
+	       	std::cout<<"last:"<<num_rx_samps_latest_call<<"\n";
+	       	exit(1); 
+	       };
+	       
+	     
+	       meanCplx(buff_short, 2*buffer_size, mean);
+	      
+	       removeMean(buff_short, 2*buffer_size, mean, buff_short_nomean);
+	       
+	       tp =  powerTotArray( buff_short_nomean, 2*buffer_size);
+	       
+	       Power=Power+tp;
+	       sec_count++;
+
 
 	      /* Process the just received buffer -> Merge data to one buffer */
 	        i1=2*num_rx_samps;
@@ -373,15 +394,24 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 	      //std::cout << "num_rx_samps=" << num_rx_samps  << std::endl;
 
 	    };
-	    
-	    for(int ii=(int)(2*total_num_samps)-10; ii< (int)(2*total_num_samps)+1; ii++){
-	      std::cout << storage_short[ii]<< "->value \n";
-	    };
-	    
-	    tp =  powerTotArray( storage_short, 2*total_num_samps);
 
-	    std::cout << "Total power=" << tp <<"\n"; 
-	    //ola++;
+	    
+	    // for(int ii=(int)(2*total_num_samps)-10; ii< (int)(2*total_num_samps)+1; ii++){
+	    //   std::cout << storage_short[ii]<< "->value \n";
+	    // };
+	    // 
+	    if(sec_count==one_sec){
+
+	      std::cout << "Total power received last second =" << Power/one_sec <<"\n"; 
+	      sec_count=0;
+	      Power=0;
+
+	      // std::cout<<"sec_count:"<<sec_count<<"\n";
+	      // std::cout<<"one_sec:"<<one_sec<<"\n";
+	      // std::cout<<"power_inst:"<<tp<<"\n";
+	      
+	    
+	    }
  
 	  }; 
     };
