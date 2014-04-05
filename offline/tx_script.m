@@ -9,30 +9,36 @@ close all
 
 % Load data previous processed
 
-test_n=1;
+test_n=2;
 
 file_str=['data/tx_data_', num2str(test_n),'.mat'];
 
 load(file_str)
 
+tx_data=tx_data_2;
 
 Nsamples=length(tx_data);
 
-rms_value=rms(tx_dat);
+rms_value=rms(tx_data);
 
-if (rms_value > 5000 && rms_value<4000)  %Set proper RMS value
-    const=5000/rms_value;
+if (rms_value > 500 || rms_value<400)  %Set proper RMS value
+    const=400/rms_value;
     tx_data=const*tx_data;
 end
 
+rms(tx_data)
+
+
+ %tx_data = cw( 2.5e6 , Nsamples);
 
 %Plot the data to send:
-figure(1,2,1)
+figure(1)
+subplot(1,2,1)
 plot(tx_data, 'o');
 title('Data to USRP');
 
 
-figure (1,2,2);
+subplot (1,2,2);
 pwelch(tx_data);
 
 drawnow;
@@ -42,12 +48,12 @@ drawnow;
 
 RF_freq=5.5e9; 
 ref_clk=0;
-gain=20;
+gain=10;
 tx_rate=25e6;
-LOoffset=0;
+LOoffset=10e6;
 low_res=0;
 
-tx( Nsamples,RF_freq, tx_seq, ref_clk , gain, tx_rate, LOoffset, low_res);
+tx( Nsamples,RF_freq, tx_data, ref_clk , gain, tx_rate, LOoffset, low_res);
 
 
 
