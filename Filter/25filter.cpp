@@ -8,6 +8,17 @@
 
 using namespace std;
 
+
+/** This function lowpass filters an input signal
+ *
+ * @pre:
+ *    - x        : input signal (array)
+ *    - nElemIN  : array size of the signal
+ *    - shift    : shift of the input signal. represents the lowpass cut off freq
+ *
+ * @post:
+ *    - y        : output signal
+ */
 template <class T,class W>
 void lowPassFilter(T x[],T y[],int nElemIN,W shift)
 {
@@ -46,6 +57,16 @@ void lowPassFilter(T x[],T y[],int nElemIN,W shift)
   fwrite(y,sizeof(std::complex<double>), nElemIN, xFilt);
   fclose(xFilt);
 }
+
+/** This function lowpass filters an input signalThis function calculates the power of an array
+ *
+ * @pre:
+ *    - data         : input signal (array)
+ *    - no_elements  : array size of the signal
+ *
+ * @post:
+ *    - power        : power of the input signal
+ */
 template <class T>
 double powerTotArray(T data[], int no_elements)
 {
@@ -61,6 +82,35 @@ double powerTotArray(T data[], int no_elements)
   return power;
 }
 
+/** This function lowpass filters an input signalThis function calculates the power of an array
+ *
+ * @pre:
+ *    - data         : input signal (array)
+ *    - nElem        : array size of the signal
+ *    - shiftindex   : shifts the data (normalized frequency); in assignment 0.04;
+ *    - numFilt      : number of filters; in assignment: 25;
+ *
+ * @post:
+ *    - power        : power of freq bands of input signal
+ */
+
+void powerOfFreqBands(double data[],int nElem, double shiftindex,double power[],int numFilt)
+{
+  complex<double>* dataC = (complex<double>*)data;
+  std::complex<double> tempC[nElem];
+  //double power[numFilt];
+  for(int i=0;i<(numFilt);i++)
+    {
+      double shift = shiftindex*i;
+      //std::cout << "Shift (normalized w0): " << shift  << std::endl;
+      lowPassFilter(dataC,tempC,nElem/2,shift);
+      double* temp = (double*) tempC;
+      power[i] = powerTotArray(temp,nElem/2);
+      //std::cout << "power: " << power[i] << " at w0: " << shift << std::endl;
+    };
+}
+
+
 int main(){
 
   //int rows = 1;//rows of the matrix = number of filters
@@ -73,19 +123,25 @@ int main(){
     data[i]=(double)3+3* cos(3.14159*0.05*i);//+cos(2*3.14159*0.2*i);
     data[i+1]=(double) 10*sin(3.14159*0.4*i);
   };
-  complex<double>* dataC = (complex<double>*)data; //casting
-  std::complex<double>  y[nElem][numFilt];//y[rows][nElem];//storage for output data
-  std::complex<double> tempC[nElem];
+
+  /* Done in the function powerOfFreqBands */
+  // complex<double>* dataC = (complex<double>*)data; //casting
+  // std::complex<double>  y[nElem][numFilt];//y[rows][nElem];//storage for output data
+  // std::complex<double> tempC[nElem];
+  // double power[numFilt];
+  // for(int i=0;i<(numFilt);i++)
+  //   {
+  //     double shift = shiftindex*i;
+  //     //std::cout << "Shift (normalized w0): " << shift  << std::endl;
+  //     lowPassFilter(dataC,tempC,nElem/2,shift);
+  //     double* temp = (double*) tempC;
+  //     power[i] = powerTotArray(temp,nElem/2);
+  //     //std::cout << "power: " << power[i] << " at w0: " << shift << std::endl;
+  //   };
+  /* -------------------------------------- */
+
   double power[numFilt];
-  for(int i=0;i<(numFilt);i++)
-    {
-      double shift = shiftindex*i;
-      //std::cout << "Shift (normalized w0): " << shift  << std::endl;
-      lowPassFilter(dataC,tempC,nElem/2,shift);
-      double* temp = (double*) tempC;
-      power[i] = powerTotArray(temp,nElem/2);
-      //std::cout << "power: " << power[i] << " at w0: " << shift << std::endl;
-    };
+  powerOfFreqBands(data,nElem,shiftindex,power,numFilt);
 
   for(int k=0;k<numFilt;k++)
     {
