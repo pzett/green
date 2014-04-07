@@ -20,16 +20,10 @@ double powerTotArray(T data[], int no_elements)
   return power;
 }
 
-bool transmissionDetection(short buff_short[],int nSamp){
+bool transmissionDetection(double buff_double[],int nSamp){
   bool transmissionDetected = false;
-  double threshold = 1.5;
+  double threshold = 1.0;
   double power = 0.0;
-  double buff_double[nSamp];
-
-  // Casting from short to double
-  for(int f=0;f<1000;f++){
-    buff_double[f] = buff_short[f];
-  }
 
   // lowpassfilter
   double a[] ={1.0000,-3.7374,5.2460,-3.2774,0.7689};
@@ -46,8 +40,14 @@ bool transmissionDetection(short buff_short[],int nSamp){
   if (power >= threshold)
     {
       transmissionDetected = true;
-      std::cout << "transmitter is transmitting! received power: " << power << std::endl;
+      std::cout << "IS transmitting!" << std::endl;
+      std::cout << "received power: " << power << std::endl;
     };
+  if(power < threshold)
+    {
+      std::cout << "not transmitting!" << std::endl;
+      std::cout << "received power: " << power << std::endl;
+    }
   return transmissionDetected;
 }
 
@@ -58,10 +58,15 @@ int main(){
   //testing data
   int nSamp = 1000;
   short buff_short[nSamp];
+  double buff_double[nSamp];
   std::fill_n(buff_short,nSamp,1.0); 
-  
-  
-  transMissDetect = transmissionDetection(buff_short,nSamp);
+
+  // Casting from short to double
+  for(int f=0;f<nSamp;f++){
+    buff_double[f] = buff_short[f];
+    //std::cout << buff_double[f] << std::endl;
+  }
+  transMissDetect = transmissionDetection(buff_double,nSamp);
 
   return 0;
 }
