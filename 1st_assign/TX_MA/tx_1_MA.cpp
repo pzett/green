@@ -147,7 +147,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
       short all[nAll];
       imp_1(all);
 
-      complex<short> *allC= (complex<short> * ) all;
+      complex<short> *buffer= (complex<short> * ) all;
       // End New Lines ////////////////////////////////////////////////
 
     //ATENTION:Always convert to complex<short> to send to the USRP transmitter
