@@ -29,7 +29,7 @@
 #include <stdio.h>      
 #include <stdlib.h>
 
-#include "funct_general.hpp"
+//#include "funct_general.hpp"
 #include "tx_funct_MN.hpp"
 
 

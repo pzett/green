@@ -4,17 +4,15 @@ LDLIBS = -luhd -lboost_program_options #`itpp-config --libs`
 
 #==============================================================
 
-all:	tx_1_MA rx 
+all:	tx_1_MA 
 
 #==============================================================
 clean:
 	rm -f *.o 
-	rm -f tx_1_MA rx 
+	rm -f tx_1_MA 
 #==============================================================
-rx: rx.o rx_funct.o rx_funct.hpp  funct_general.o funct_general.hpp
-	$(CXX) -o $@ $^ $(LDLIBS) 
-#==============================================================
-tx: tx_1_MA.o tx_funct_MN.o tx_funct_MN.hpp  funct_general.o funct_general.hpp
+
+tx: tx_1_MA.o tx_funct_MN.o tx_funct_MN.hpp
 
 	$(CXX) -o $@ $^ $(LDLIBS) 
 #==============================================================
