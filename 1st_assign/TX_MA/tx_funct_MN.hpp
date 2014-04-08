@@ -5,8 +5,11 @@
 #include <fstream>
 #include <cmath>
 
+#include "tx_funct_MN.cpp"
 
-void qpsk(double data_bin[], double data_qpsk[], int nElem)
+using namespace std;
+
+void qpsk(double data_bin[], double data_qpsk[], int nElem);
 
 
-void imp_1(short out[])
+void imp_1(short *out);
