@@ -1,11 +1,8 @@
-
+*
 !*.*
 !Makefile
-*.dat
-*.bin
 *.out
 *.o
 *~
 [#]*[#]
-square_elements_of_array_debug.cpp
-*.dat
+sent.bin
