@@ -1,0 +1,8 @@
+
+!*.*
+!Makefile
+*.out
+*.o
+*~
+[#]*[#]
+sent.bin

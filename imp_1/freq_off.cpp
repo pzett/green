@@ -1,5 +1,5 @@
 #include <iostream>
-
+//#include "arrayToCvec.cpp"
 #include <itpp/itbase.h>
 #include <itpp/itsignal.h>
 using namespace itpp;
@@ -42,7 +42,7 @@ double freqOff(cvec data){
   // assure to do fft on enough points and power of 2
   int a=0;
   if (data.length()>pow2(16)){a=pow2(ceil(log2(data.length())));}
-  else {a=pow2(16); cout << "Warning! data too small in freqOff";}
+  else {a=pow2(16); std::cout << "Warning! data too small in freqOff" << std::endl;}
 
   cvec fftOUT=itpp::fft(data,a);
   //std::cout << "a= " <<a << '\n';
@@ -59,7 +59,8 @@ double freqOff(cvec data){
   int i1=0;
   double maxFFT1=max(fftFILT,i1);
   //std::cout << "max 1= " << i1 <<"->" << maxFFT1 << '\n';
-  int range=2;
+  int range=(int)((double) (fftSIZE/data.length()));
+  //std::cout << "range: " << range << std::endl;
 
   // Put the first max and neighbours to 0
   fftFILT.set_subvector(i1-range,i1+range,0.0);
@@ -75,10 +76,10 @@ double freqOff(cvec data){
   return nu;
 }
 
-double freqOff(short buff_short[], int nElem){
-  cvec fftIN=arrayToCvec(buff_short, nElem);
-  return freqOff(fftIN);
-}
+// double freqOff(short buff_short[], int nElem){
+//   cvec fftIN=arrayToCvec(buff_short, nElem);
+//   return freqOff(fftIN);
+// }
 /*
 int main () {
  std::cout << "here";

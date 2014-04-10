@@ -31,7 +31,7 @@
 #include <fstream>
 
 //#include "funct_general.hpp"
-#include "tx_funct_MN.hpp"
+#include "tx_funct_2.hpp"
 
 
 namespace po = boost::program_options;
