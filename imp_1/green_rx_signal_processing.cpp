@@ -15,7 +15,7 @@ using namespace itpp;
 void matchedFilter(std::complex<double> data_compl[],int dataLength,std::complex<double> output[], int outLength){
   double a[] = {1.0,0.0,0.0,0.0};
   double b[] = {1.0,1.0,1.0,1.0};
-  int nElemA = 4;
+  int nElemA = 1;
   int nElemB = 4;
   filter(b,nElemB,a,nElemA,data_compl,output,dataLength);
 }
@@ -30,9 +30,10 @@ double freqOffset=0.0;
   }
   cvec buff_cvec = arrayToCvec(buff_double,buffersize);
 
+  //cout << " buff_cvec: " << buff_cvec << endl;
   freqOffset=freqOff(buff_cvec);
-  //std::cout << "... " << freqOffset << std::endl;
-
+  std::cout << "freqOffset " << freqOffset << std::endl;
+  
   const double pi = std::acos(-1);
 
   // multiplying elementwise and getting x_complD out!
@@ -45,18 +46,20 @@ double freqOffset=0.0;
     {
       complExp[f] = cos(-2.00*pi*freqOffset*counter);
       complExp[f+1] = sin(-2.00*pi*freqOffset*counter);
-      /* Multiplying the complex arrays elementwise */
+      // Multiplying the complex arrays elementwise 
       x[f]=complExp[f]*buff_double[f] - complExp[f+1]*buff_double[f+1]; // real part
       x[f+1]=complExp[f]*buff_double[f+1] + complExp[f+1]*buff_double[f]; //imag part
       x_complD[counter]=std::complex<double>(x[f],x[f+1]);
       counter++;
     };
 
+
+  
   // for(int k=0;k<=(buffersize/2);k++){
   // std::cout << x_complD[k] << std::endl;
   // }
 
-  /* Debugging Outputs */
+  // Debugging Outputs 
   // std::cout << "length buff_short  : " << sizeof(buff_short)/sizeof(buff_short[0]) << std::endl;
   // std::cout << "length buff_double : " << sizeof(buff_double)/sizeof(buff_double[0]) << std::endl;
   // std::cout << "length x           : " << sizeof(x)/sizeof(x[0]) << std::endl;
@@ -64,14 +67,22 @@ double freqOffset=0.0;
   // std::cout << "length complExp    : " << sizeof(complExp)/sizeof(complExp[0]) << std::endl;
   // std::cout << "counter: " << counter << std::endl;
   // std::cout << buff_cvec << std::endl;
-  /* ----------------  */
-
+  // ----------------  
+  
   std::cout << " Frequency Offset Removed! " << std::endl;
 
   // matched filtering
   std::complex<double> x_matchedFilt [buffersize/2];
   matchedFilter(x_complD,buffersize/2,x_matchedFilt,buffersize/2);
-  
+
+
+  // FILE * xFilt;
+  // xFilt = fopen("multiplyer.bin","wb");
+  // fwrite(x_matchedFilt,sizeof(double), buffersize, xFilt);
+  // fclose(xFilt);
+
+
+ 
   std::cout << " Matched Filtered! " << std::endl;
 
   // synchronization
@@ -118,19 +129,29 @@ double freqOffset=0.0;
   complex<double> * res;
   int res_size=nTrainSeq;
   res= new complex<double>[res_size];  
+  
+  /*error message
 
-  res_size= filter_phase( x_downsampled, sizeof(x_downsampled)/sizeof(x_downsampled[0]),  phase, trainSeq, nTrainSeq, 0.01,0.01, 0.01, res);
 
-  std::cout << " Phase Filteres! " << std::endl;
+*** glibc detected *** ./green_rx_signal_processing: free(): corrupted unsorted chunks: 0x0000000000c24ff0 ***
+*** glibc detected *** ./green_rx_signal_processing: malloc(): memory corruption: 0x0000000000c3e4b0 ***
+
+  */
+
+  /*
+  res_size = filter_phase( x_downsampled, sizeof(x_downsampled)/sizeof(x_downsampled[0]),  phase, trainSeq, nTrainSeq, 0.01,0.01, 0.01, res);
+
+  //std::cout << " Phase Filteres! " << std::endl;
 
   // detect
-  //short data_bin[buffersize/8];
+  short data_bin[buffersize/8];
   hardDetect(res,data_bin,buffersize/8);
 
   std::cout << " Detected! " << std::endl;
 
   std::cout << " " << std::endl;
   std::cout << " Done! " << std::endl;
+  */
 }
 
 //cvec complExp(double freqOffset,
@@ -138,15 +159,32 @@ double freqOffset=0.0;
 
 int main(){
 
-  // creating some testing data
-  int buffersize = 1000;
+  // loading the test data
+  // Create storage for Train //////////////////////////
+  int buffersize = 55680*2;
+  double buff_double[buffersize];
+
+  // Read data from file
+  std::ifstream ifs( "data_receive.dat" , std::ifstream::in );
+  ifs.read((char * )buff_double,buffersize*sizeof(double));
+  ifs.close();
+
+  // Casting to short
   short buff_short[buffersize];
-  // creating data
-  for(int i=0;i<buffersize-1; i=i+2){
-    buff_short[i]=(short) 3*cos(3.14159*0.62*i) +1* cos(3.14159*0.56*i);//+cos(2*3.14159*0.2*i);
-    buff_short[i+1]=(short) 10*sin(3.14159*0.6*i);
-    //std::cout << buff_short[i] << " " << buff_short[i+1] << std::endl;
+  for(int k=0;k<buffersize;k++){
+    buff_short[k] = (short) buff_double[k];
+    //cout << buff_short[k] << endl;
   };
+
+  // // creating some testing data
+  // int buffersize = 1000;
+  // short buff_short[buffersize];
+  // // creating data
+  // for(int i=0;i<buffersize-1; i=i+2){
+  //   buff_short[i]=(short) 3*cos(3.14159*0.62*i) +1* cos(3.14159*0.56*i);//+cos(2*3.14159*0.2*i);
+  //   buff_short[i+1]=(short) 10*sin(3.14159*0.6*i);
+  //   //std::cout << buff_short[i] << " " << buff_short[i+1] << std::endl;
+  // };
 
   short data_bin[buffersize/8];
   receiverSignalProcessing(buff_short,buffersize,data_bin);
