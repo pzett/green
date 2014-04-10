@@ -1,13 +1,7 @@
-// MODIFIED FOR RX!!! DO NOT USE AS MODEL!!!
 
-
-//#include <itpp/itbase.h>
-#include <iostream>
 
 using namespace std;
-//using namespace itpp;
 
-#define DispVal(X) std::cout << #X << " = " << X<< std::endl
 
 /** Filter the real array x by the filter h(q)=b(q)/a(q)
  *
@@ -70,47 +64,48 @@ void filter(double b[], int nElemB, double a[], int nElemA, double x[], double y
   }
 }
 
-/** Split a complex array into an array of real and an array of imag
- *
- * @pre:
- *    - in: pointer to complex array to split
- *    - real: pointer to array that will contain the real part
- *                            size of nElem/2
- *    - imag: pointer to array that will contain the real part
- *                            size of nElem/2
- *    - nElem: the size of in[]
- *
- * @post:
- *    - real is now filled
- *    - imag is now filled
- */
-void splitComp(double in[], double real[], double imag[], int nElem){
-  for (int i=0;i<nElem;i=i+2){
-    real[i]=in[i];
-    imag[i]=in[i+1];
+
+double powerTotArray(double data[], int no_elements)
+{
+  double power = 0.0;
+  double tmp;
+  for (int i=0;i<no_elements;i++){
+    tmp= data[i];
+    power= power+(tmp*tmp)/(no_elements/2);
+    if(power<0){
+      std::cout<<power;
+    };
   }
+  return power;
 }
 
-/** Merge an array of real and an array of imag into an array of complex
- *
- * @pre:
- *    - in: pointer to complex array to split
- *    - real: pointer to array that contains the real part
- *                            size of nElem
- *    - imag: pointer to array that contains the real part
- *                            size of nElem
- *    - out: pointer that will contain the complex array
- *                            size of 2*nElem
- *    - nElem: the size of real[]
- *
- * @post:
- *    - out is now filled
- */
-void compMerge(double real[], double imag[], double out[], int nElem){
-  int c=0;
-  for (int i=0;i<nElem;i++){
-    out[c]=real[i];
-    out[c+1]=imag[i];
-    c=c+2;
-  }
+bool transmissionDetection(double buff_double[],int nSamp){
+  bool transmissionDetected = false;
+  double threshold = 1000;
+  double power = 0.0;
+
+  // lowpassfilter
+  double a[] ={1.0000,-3.7374,5.2460,-3.2774,0.7689};
+  double b[] ={1.0e-04 *0.0562,1.0e-04*0.2247,1.0e-04*0.3370,1.0e-04*0.2247,1.0e-04*0.0562};
+  int nElemB = 5;
+  int nElemA = 5;
+  double buffFilt[nSamp];
+  filter(b,nElemB,a,nElemA,buff_double,buffFilt,nSamp);
+
+  // power calculation
+  power = powerTotArray(buffFilt, nSamp);
+
+  // comparing with threshold
+  if (power >= threshold)
+    {
+      transmissionDetected = true;
+      std::cout << "IS transmitting!" << std::endl;
+      std::cout << "received power: " << power << std::endl;
+    };
+  if(power < threshold)
+    {
+      std::cout << "not transmitting!" << std::endl;
+      std::cout << "received power: " << power << std::endl;
+    }
+  return transmissionDetected;
 }

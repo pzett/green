@@ -50,7 +50,7 @@ int nData=6250;
  int nTrain=100*2; // To store complex part *2
 int nPref=500*2;
 int nGuard=10*2;
-short amp=5000;
+short amp=7000;
 
 
  double guard[nGuard]; fill_n(guard,nGuard,0);
