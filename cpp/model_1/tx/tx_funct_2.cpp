@@ -43,7 +43,7 @@ void qpsk(double data_bin[], double data_qpsk[], int nElem){
 
 
 //int main (){
-short* imp_1(){
+void imp_1(short allUp[]){
 // QPSK, 1st imp
 
 int nData=6250;
@@ -116,7 +116,7 @@ copy(data_qpsk, &data_qpsk[nData],&all[nPref+nGuard+nTrain+nTrain+nData]);
 
 // Upsample ///////////////////////////////////////////////
  int Q=4;
-short allUp[Q*nAll];
+ //short allUp[Q*nAll];
  double* p=all;
  short* q=allUp;
  for (int i =0; i<nAll;i=i+2){
@@ -134,5 +134,5 @@ short allUp[Q*nAll];
  }
  */
  //return 0;
- return allUp;
+ //return allUp;
 }

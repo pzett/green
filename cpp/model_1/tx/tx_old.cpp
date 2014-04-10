@@ -28,10 +28,9 @@
 #include <cstdio>
 #include <stdio.h>      
 #include <stdlib.h>
-#include <fstream>
 
-//#include "funct_general.hpp"
-#include "tx_funct_2.hpp"
+#include "funct_general.hpp"
+#include "tx_funct.hpp"
 
 
 namespace po = boost::program_options;
@@ -41,126 +40,136 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
   
   //Seting priority in the processor to run faster -> run with sudo
-  if (uhd::set_thread_priority_safe(1,true)) {
-    std::cout << "set priority went well " << std::endl;
-  };
+     if (uhd::set_thread_priority_safe(1,true)) {
+       std::cout << "set priority went well " << std::endl;
+       };
 
 
-  //variables to be set by po -> Set when initializing the tx program
-  std::string args;
-  double seconds_in_future;
-  size_t total_num_samps;
-  double tx_rate, freq, LOoffset;
-  float gain;
-  bool forever, use_8bits;
-  bool use_external_10MHz, trigger_with_pps;
-  bool readFile;
-  std::string filename;
-  uhd::tx_streamer::sptr tx_stream;
-  uhd::device_addr_t dev_addr;
-  uhd::usrp::multi_usrp::sptr dev;
-  uhd::stream_args_t stream_args;
+    //variables to be set by po -> Set when initializing the tx program
+    std::string args;
+    double seconds_in_future;
+    size_t total_num_samps;
+    double tx_rate, freq, LOoffset;
+    float gain;
+    bool forever, use_8bits;
+    bool use_external_10MHz, trigger_with_pps;
+    bool readFile;
+    std::string filename;
+    uhd::tx_streamer::sptr tx_stream;
+    uhd::device_addr_t dev_addr;
+    uhd::usrp::multi_usrp::sptr dev;
+    uhd::stream_args_t stream_args;
 
-  //setup the program options -> Passing it from terminal with boost library 
-  po::options_description desc("Allowed options");
-  desc.add_options()
-    ("help", "help message")
-    ("args", po::value<std::string>(&args)->default_value(""), "simple uhd device address args")
-    ("secs", po::value<double>(&seconds_in_future)->default_value(3), "number of seconds in the future to transmit")
-    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(1000), "total number of samples to transmit")
-    ("txrate", po::value<double>(&tx_rate)->default_value(100e6/16), "rate of outgoing samples")
-    ("freq", po::value<double>(&freq)->default_value(0), "rf center frequency in Hz")
-    ("LOoffset", po::value<double>(&LOoffset)->default_value(0), "Offset between main LO and center frequency")
-    ("forever",po::value<bool>(&forever)->default_value(false), "run indefinetly")
-    ("10MHz",po::value<bool>(&use_external_10MHz)->default_value(false), 
-     "external 10MHz on 'REF CLOCK' connector (true=1=yes)")
-    ("PPS",po::value<bool>(&trigger_with_pps)->default_value(false), 
-     "trigger reception with 'PPS IN' connector (true=1=yes)")
-    ("filename",po::value<std::string>(&filename)->default_value("data_to_usrp.dat"), "input filename")
-    ("gain",po::value<float>(&gain)->default_value(0), "gain of transmitter")
-    ("8bits",po::value<bool>(&use_8bits)->default_value(false), "Use eight bits/sample to increase bandwidth")
+    //setup the program options -> Passing it from terminal with boost library 
+    po::options_description desc("Allowed options");
+    desc.add_options()
+        ("help", "help message")
+        ("args", po::value<std::string>(&args)->default_value(""), "simple uhd device address args")
+        ("secs", po::value<double>(&seconds_in_future)->default_value(3), "number of seconds in the future to transmit")
+        ("nsamps", po::value<size_t>(&total_num_samps)->default_value(1000), "total number of samples to transmit")
+        ("txrate", po::value<double>(&tx_rate)->default_value(100e6/16), "rate of outgoing samples")
+        ("freq", po::value<double>(&freq)->default_value(0), "rf center frequency in Hz")
+        ("LOoffset", po::value<double>(&LOoffset)->default_value(0), "Offset between main LO and center frequency")
+        ("forever",po::value<bool>(&forever)->default_value(false), "run indefinetly")
+        ("10MHz",po::value<bool>(&use_external_10MHz)->default_value(false), 
+	     "external 10MHz on 'REF CLOCK' connector (true=1=yes)")
+      ("PPS",po::value<bool>(&trigger_with_pps)->default_value(false), 
+            "trigger reception with 'PPS IN' connector (true=1=yes)")
+        ("filename",po::value<std::string>(&filename)->default_value("data_to_usrp.dat"), "input filename")
+        ("gain",po::value<float>(&gain)->default_value(0), "gain of transmitter")
+        ("8bits",po::value<bool>(&use_8bits)->default_value(false), "Use eight bits/sample to increase bandwidth")
   
-    ////////////////////////////////
-    ("readFile",po::value<bool>(&readFile)->default_value(false), "defines if program reads data from file or generate data itself")
-    ;
+      ////////////////////////////////
+      ("readFile",po::value<bool>(&readFile)->default_value(false), "defines if program reads data from file or generate data itself")
+      ;
 
     
-  //Variables stored in boost objects
-  po::variables_map vm;
-  po::store(po::parse_command_line(argc, argv, desc), vm);
-  po::notify(vm);
+    //Variables stored in boost objects
+    po::variables_map vm;
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
 
-  //print the help message
-  if (vm.count("help")){
-    std::cout << boost::format("tx %s") % desc << std::endl;
-    return ~0;
-  }
+    //print the help message
+    if (vm.count("help")){
+        std::cout << boost::format("tx %s") % desc << std::endl;
+        return ~0;
+    }
 
-  //////// Create buffer storage to pass to USRP -> complex short always
+    //////// Create buffer storage to pass to USRP -> complex short always
  
-  std::complex<short> *buffer;
-  buffer = new std::complex<short>[total_num_samps];
-  int nAll=13920*4;
-  short *all;
-  all = new short[nAll];
-  ////////////////// Create data to be transmitted ///////////////////////
+    std::complex<short> *buffer;
+    buffer = new std::complex<short>[total_num_samps];
+
+    ////////////////// Create data to be transmitted ///////////////////////
    
-  if(readFile==true){
+    if(readFile==true){
 
-    /* Read input from disc -> data previous generated by MATLAB*/ 
-    FILE *fp = 0;
-    fp = fopen(filename.c_str(), "rb");    
-    if (fp == 0){
-      perror(filename.c_str());
-      return 1;
-    }
-    int r=fread(buffer, sizeof(uint32_t),total_num_samps, fp);
-    printf("r=%d \n",r);
-    fclose(fp);
-      
-    printf("USING MATLAB DATA!\n");
-
-  }else{
-
- 
-    imp_1(all);
-    /*
-      for (int i=(0)*4;i<(10)*4;i++){
-      cout << "all["<<i<<"] = " << all[i]<<"\n";
+      /* Read input from disc -> data previous generated by MATLAB*/ 
+      /*
+      FILE *fp = 0;
+      fp = fopen(filename.c_str(), "rb");    
+      if (fp == 0){
+	perror(filename.c_str());
+	return 1;
       }
-    */
-    buffer= (std::complex<short> * ) all;
-    /*
-      for (int i=(0)*4;i<(10)*4;i++){
-      cout << "buffer["<<i<<"] = " << buffer[i]<<"\n";
-      }
-     
-    int nData=6250;
-    int nTrain=100*2; // To store complex part *2
-    int nPref=500*2;
-    int nGuard=10*2;
+      int r=fread(buffer, sizeof(uint32_t),total_num_samps, fp);
+      printf("r=%d \n",r);
+      fclose(fp);
+      */
 
-    //cout<<nAll;
-  
-    // for (int i=(nPref+nGuard+nTrain-1)*4;i<(nPref+nGuard+nTrain+10)*4;i++){
-    for(int i=nAll-100;i<nAll;i++){
-      cout << "allUp["<<i<<"] = " << all[i]<<"\n";
-    }
+// Read data from file
+std::ifstream ifs3( "sent.dat" , std::ifstream::in );
+ifs3.read((char * )buffer,total_num_samps*sizeof(short));
+ifs3.close();
+      printf("USING MATLAB DATA!\n");
 
-    //for (int i=0; i<500;i++){cout << buffer[i] << "\n";}
-    */
-    FILE * xFile;
-    xFile = fopen("sent.dat","wb");
-    fwrite(buffer, 2*sizeof(short),nAll/2,xFile);
-    fclose(xFile);
+    }else{
+
+    
+      /*Creates data to be transmitted->Call functions to generate data*/
+    
+      //Process data in double or complex<double>
+
+      //Continuous waveform test:
+    double amp=5000;
+    double cw_freq=3e6;
+
+    double *seq;
+    seq = new double[2*total_num_samps+1];
+    
+    create_data_CW ( seq, 2*total_num_samps,  cw_freq/tx_rate,  amp );
+
+    complex<double> * seq_c=(complex<double> *) seq;
+
+    //Test casting when necessary:
+    //for(int ii=0;ii<12;ii++){
+    //    std::cout << seq[ii]/amp<< "->value \n";
+    // };
+    //std::cout << "\n casting \n";
+   
+    
 
     //ATENTION:Always convert to complex<short> to send to the USRP transmitter
 
+    compDoubleToCompShort(seq_c, total_num_samps, buffer);
+
+  FILE * xFile;
+    xFile = fopen("sent2.bin","wb");
+    fwrite(buffer, 2*sizeof(short),total_num_samps/2,xFile);
+    fclose(xFile);
+
+
     printf("USING CPP IMPLEMENTATION!\n");
     
-  };
- /////////////////////////////////////////////////////////////////////////
+    };
 
+
+
+
+
+    /////////////////////////////////////////////////////////////////////////
+
+    
     //create a USRP device and streamer
     dev_addr["addr0"]="192.168.10.2";
     
