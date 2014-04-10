@@ -23,18 +23,18 @@ using namespace std;
  */
 void qpsk(double data_bin[], double data_qpsk[], int nElem){
   for (int i=0;i<nElem;i=i+2){
-    if((short) data_bin[i]==0){ 
+    if( round(data_bin[i])==0){ 
       // 00 mapped to 1+j
-      if ((short) data_bin[i+1]==0){data_qpsk[i]=1/1.4142 ; data_qpsk[i+1]=1/1.4142;}
+      if (round( data_bin[i+1])==0){data_qpsk[i]=1/1.4142 ; data_qpsk[i+1]=1/1.4142;}
       // 01 mapped to 1-j
-      else if((short) data_bin[i+1]==1){data_qpsk[i]=1/1.4142 ; data_qpsk[i+1]=-1/1.4142;}
+      else if( round(data_bin[i+1])==1){data_qpsk[i]=1/1.4142 ; data_qpsk[i+1]=-1/1.4142;}
       else {cerr << "The input data_bin is not composed of 01"<<"\n";}
     } 
-    else if((short) data_bin[i]==1){
+    else if( round(data_bin[i])==1){
       // 10 mapped to -1+j
-      if ( (short)data_bin[i+1]==0){data_qpsk[i]=-1/1.4142 ; data_qpsk[i+1]=1/1.4142;}
+      if ( round(data_bin[i+1])==0){data_qpsk[i]=-1/1.4142 ; data_qpsk[i+1]=1/1.4142;}
       // 11 mapped to -1-j
-      else if((short)data_bin[i+1]==1){data_qpsk[i]=-1/1.4142 ; data_qpsk[i+1]=-1/1.4142;}
+      else if(round(data_bin[i+1])==1){data_qpsk[i]=-1/1.4142 ; data_qpsk[i+1]=-1/1.4142;}
       else {cerr << "The input data_bin is not composed of 01"<<"\n";;}
     }
     else {cerr << "The input data_bin is not composed of 01"<<"\n";;}
@@ -43,17 +43,17 @@ void qpsk(double data_bin[], double data_qpsk[], int nElem){
 
 
 //int main (){
-void imp_1(short out[]){
+short* imp_1(){
 // QPSK, 1st imp
 
 int nData=6250;
  int nTrain=100*2; // To store complex part *2
 int nPref=500*2;
 int nGuard=10*2;
-short amp=1000;
+short amp=5000;
 
 
- double guard[]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+ double guard[nGuard]; fill_n(guard,nGuard,0);
 
 // Create storage for Train //////////////////////////
 double train[nTrain];
@@ -62,16 +62,31 @@ double train[nTrain];
 std::ifstream ifs( "train_norm.dat" , std::ifstream::in );
 ifs.read((char * )train,nTrain*sizeof(double));
 ifs.close();
-
+/*
+ for (int i=0;i<2*4;i++){
+   cout << "Train["<<i<<"] = " << train[i]<<"\n";
+ }
+*/
 
 // Create storage for Data //////////////////////////////
 double Data[nData];
+
 
 // Read data from file
 std::ifstream ifs2( "data.dat" , std::ifstream::in );
 ifs2.read((char * )Data,nData*sizeof(double));
 ifs2.close();
-
+/*
+// Read data from file
+std::ifstream ifs2( "data.bin" , std::ifstream::in );
+ifs2.read((char * )Data,nData*sizeof(double));
+ifs2.close();
+*/
+/*
+ for (int i=0;i<2*4;i++){
+   cout << "Data["<<i<<"] = " << Data[i]<<"\n";
+ }
+*/
 
 // Create storage for prefix ////////////////////////////
 double pref[nPref];
@@ -112,12 +127,12 @@ short allUp[Q*nAll];
    }
    p=p+2;
  }
- /*
+ /* 
  cout<<nAll;
- for (int i=(nPref-2)*4;i<(nPref+nGuard)*4;i++){
+ for (int i=(nPref+nGuard+nTrain-1)*4;i<(nPref+nGuard+nTrain+10)*4;i++){
    cout << "allUp["<<i<<"] = " << allUp[i]<<"\n";
  }
  */
  //return 0;
- out=allUp;
+ return allUp;
 }

@@ -28,6 +28,7 @@
 #include <cstdio>
 #include <stdio.h>      
 #include <stdlib.h>
+#include <fstream>
 
 //#include "funct_general.hpp"
 #include "tx_funct_MN.hpp"
@@ -144,10 +145,37 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     */
       // New Lines ////////////////////////////////////////////////////
       int nAll=13920*4;
-      short all[nAll];
-      imp_1(all);
+      //  short all[nAll];
+      short* all=imp_1();
+      /*
+ for (int i=(0)*4;i<(1)*4;i++){
+   cout << "all["<<i<<"] = " << all[i]<<"\n";
+ }
+      */
+ std::complex<short> *buffer= (std::complex<short> * ) all;
+ /*
+ for (int i=(0)*4;i<(1)*4;i++){
+   cout << "buffer["<<i<<"] = " << buffer[i]<<"\n";
+ }
+ */
+int nData=6250;
+ int nTrain=100*2; // To store complex part *2
+int nPref=500*2;
+int nGuard=10*2;
 
-      complex<short> *buffer= (complex<short> * ) all;
+  cout<<nAll;
+  
+  // for (int i=(nPref+nGuard+nTrain-1)*4;i<(nPref+nGuard+nTrain+10)*4;i++){
+  for(int i=nAll-100;i<nAll;i++){
+   cout << "allUp["<<i<<"] = " << all[i]<<"\n";
+ }
+
+      //for (int i=0; i<500;i++){cout << buffer[i] << "\n";}
+
+      FILE * xFile;
+      xFile = fopen("sent.bin","wb");
+      fwrite(all, sizeof(short),nAll,xFile);
+      fclose(xFile);
       // End New Lines ////////////////////////////////////////////////
 
     //ATENTION:Always convert to complex<short> to send to the USRP transmitter

@@ -3,19 +3,20 @@
 
 using namespace std;
 /*
-void meanCplx(float data[], int no_elements, float *mean[])
+  template<class T>
+void meanCplx(T data[], int no_elements, float mean[])
 {
   float valueReal;
   float valueImag;
   for (int i=0;i<no_elements;i++){
     if (i%2==0){	
-	valueReal=valueReal+*data[i]/no_elements/2;
+	valueReal=(valueReal+data[i])/2;
       }
     else {
-	valueImag=valueImag+*data[i]/no_elements/2;
+	valueImag=(valueImag+data[i])/2;
     }
-      *mean[0]=valueReal;
-      *mean[1]=valueImag;
+      mean[0]=valueReal;
+      mean[1]=valueImag;
   };
 };
 */
