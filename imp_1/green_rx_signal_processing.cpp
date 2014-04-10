@@ -157,10 +157,9 @@ double freqOffset=0.0;
 //cvec complExp(double freqOffset,
 
 
-int main(){
+int main() {
 
-  // loading the test data
-  // Create storage for Train //////////////////////////
+
   int buffersize = 55680*2;
   double buff_double[buffersize];
 
