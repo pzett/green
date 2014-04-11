@@ -65,6 +65,20 @@ void filter(double b[], int nElemB, double a[], int nElemA, double x[], double y
 }
 
 
+double powerTotArray(short data[], int no_elements)
+{
+  double power = 0.0;
+  double tmp;
+  for (int i=0;i<no_elements;i++){
+    tmp= (double)data[i];
+    power= power+(tmp*tmp)/(no_elements/2);
+    if(power<0){
+      std::cout<<power;
+    };
+  }
+  return power;
+}
+
 double powerTotArray(double data[], int no_elements)
 {
   double power = 0.0;
