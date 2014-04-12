@@ -83,9 +83,10 @@ void filter(U b[], int nElemB, U a[], int nElemA, T x[], T y[], int nElemIN){
  */
 template <class T>
 void splitComp(T in[], T real[], T imag[], int nElem){
-  for (int i=0;i<nElem;i=i+2){
-    real[i]=in[i];
-    imag[i]=in[i+1];
+  for (int i=0, count=0;i<nElem;i=i+2){
+    real[count]=in[i];
+    imag[count]=in[i+1];
+    count++;
   }
 }
 
@@ -147,15 +148,28 @@ void filterComp(U b[], int nElemB, U a[], int nElemA, T x[], T y[], int nElemIN)
 /*
 int main () {
   int nElem=8;
-  double data[]={1, 1, 0, 0, 0, 0, 0, 0};
+  double data[]={1, 1, 2, 2, 3, 3, 4, 4};
   double out[nElem];
   //std::cout << "datas to be sent:" << data << '\n';
-  int nElemA=2;
-  int nElemB=3;
-  double a[]={1, 0.25};
-  double b[]={1,0.03, 0.5};
+  int nElemA=1;
+  int nElemB=4;
+  double a[]={1.0};
+  double b[]={1.0,1.0,1.0,1.0};
   // cvec a(8);
   // std::cout <<"a size. "<< a.size()<< "\n";
+
+  double real[nElem/2], imag[nElem/2];
+
+  splitComp(data, real,  imag,  nElem);
+
+  for (int i=0;i<nElem/2;i++){
+  std::cout << "elem= " << i << '\n';
+  DispVal(real[i]);
+   DispVal(imag[i]);
+  }
+
+  std::cout<<"--------------\n";
+
   filterComp(b,nElemB,a,nElemA,data,out, nElem);
   for (int i=0;i<nElem;i++){
   std::cout << "elem= " << i << '\n';
@@ -163,4 +177,4 @@ int main () {
   }
 }
 
-*/
+

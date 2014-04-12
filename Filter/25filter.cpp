@@ -95,8 +95,7 @@ double powerTotArray(double data[], int no_elements)
 
 void powerOfFreqBands(double data[],int nElem, double shiftindex,double power[],int numFilt)
 {
-  //complex<double>* dataC = (complex<double>*)data;
-  //std::complex<double> tempC[nElem];
+  
   double temp[nElem];
   //double power[numFilt];
   for(int i=0;i<=(numFilt);i++)
@@ -104,7 +103,7 @@ void powerOfFreqBands(double data[],int nElem, double shiftindex,double power[],
       double shift = shiftindex*i;
       //std::cout << "Shift (normalized w0): " << shift  << std::endl;
       lowPassFilter(data,temp,nElem,shift);
-      //double* temp = (double*) tempC;
+      
       power[i] = powerTotArray(temp,nElem);
       //std::cout << "power: " << power[i] << " at w0: " << shift << std::endl;
       //std::cout << "numFilt: " << i << std::endl;
