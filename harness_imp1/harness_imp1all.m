@@ -1,16 +1,13 @@
 % harness.m
 % For more information search for "README:" in harness.cpp.
 
-clear all;
+clear ;
 close all;
 
 % Read data from file -> rx_data
 load('rx_test.mat');
-
 rx_data_test=5000*rx_data_test;
-
-plot(abs(rx_data_test))
-
+%plot(abs(fft(rx_data_test,2^20)))
 temp=zeros(1,2*length(rx_data_test));
 for i1=1:size(rx_data_test,2)
    temp(i1*2-1)=real(rx_data_test(1,i1));
@@ -30,40 +27,62 @@ cmd_str=[cmd_str,' --buffer_size=',num2str(buffer_size)];
 cmd_str
 system(cmd_str);
 
+
 nr_data_bits = 6250;  
 
-% Load data from file (note the type)
-fid=fopen('data_from_harness.dat','r');
-temp=fread(fid, nr_data_bits ,'double');
-fclose(fid);
 
 %C++ results done here 
 
 %Read train sequence from file
 fid1=fopen('train_norm.dat','r');
-train_seq_double=fread(fid1,100*2,'double');
+x=fread(fid1,100*2,'double');
 fclose(fid1);
 
+train= zeros(1,100);
 count = 1;
-for i=1:2:(100*2)
-    train(count) = complex(train_seq_double(i),train_seq_double(i+1));
+for i=1:2:100*2
+    train(count) = complex(x(i),x(i+1));
     count = count+1;
 end
+train_up=upfirdn(train,ones(4,1),4,1);
+
+
+% figure
+% subplot(3,2,1)
+% plot(real(rx_data_test))
+% subplot(3,2,3)
+% plot(imag(rx_data_test))
+% subplot(3,2,5)
+% plot(abs(rx_data_test))
+% subplot(3,2,2)
+% plot(real(train_up))
+% subplot(3,2,4)
+% plot(imag(train_up))
+% subplot(3,2,6)
+% plot(abs(train_up))
+% o=xcorr(abs(rx_data_test),abs(train_up))
+% figure
+% plot(o)
 
 
 %Parameters to the script:
 rx_data=rx_data_test.';
-train;
+
 
 % Run the matlab implementation -> Call the script that process that
+
 imp1_rx_sim
 
-result_from_harness=zeros(1,length(temp)/2);
-i2=1;
-for i1=1:2:length(temp)
-   result_from_harness(i2)=temp(i1)+i*temp(i1+1);
-   i2=i2+1;
-end;
+
+
+
+% Load data from file (note the type)
+fid=fopen('data_from_harness.dat','r');
+temp=fread(fid, nr_data_bits ,'short');
+fclose(fid);
+
+
+result_from_harness=temp;
 
 %figure(1);
 %hold off
@@ -73,16 +92,32 @@ end;
 %legend('C++ implementation (harness)','matlab implementation');
 %axis([-1000 1000 -1000 1000])
 
-%ERROR=sum(abs(result_from_harness-result_from_matlab.'))
+% Load data_sent from file (note the type)
+fid=fopen('data.dat','r');
+data_correct=fread(fid, 6250 ,'double');
+fclose(fid);
+
+ERROR_cpp=sum(abs(result_from_harness-data_correct))/6250
 
 % Load data_sent from file (note the type)
 fid=fopen('data.dat','r');
 data_correct=fread(fid, 6250 ,'double');
 fclose(fid);
 
-length(rx_data_detect)
+length(rx_data_detect);
 
-BER=sum(abs(data_correct.'-rx_data_detect))/6250
+BER_MATLAB=sum(abs(data_correct.'-rx_data_detect))/6250
+
+subplot(3,2,6)
+plot(abs(rx_data_detect'-data_correct)/2);
+title('Matlab Rx processing');
+
+figure(2)
+cppresults
+subplot(3,2,6)
+plot(abs(result_from_harness-data_correct)/2);
+title('C++ Rx processing');
+
 
 
 

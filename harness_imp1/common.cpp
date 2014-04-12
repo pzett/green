@@ -84,11 +84,13 @@ void filter(U b[], int nElemB, U a[], int nElemA, T x[], T y[], int nElemIN){
  *    - real is now filled
  *    - imag is now filled
  */
+
 template <class T>
 void splitComp(T in[], T real[], T imag[], int nElem){
-  for (int i=0;i<nElem;i=i+2){
-    real[i]=in[i];
-    imag[i]=in[i+1];
+  for (int i=0, count=0;i<nElem;i=i+2){
+    real[count]=in[i];
+    imag[count]=in[i+1];
+    count++;
   }
 }
 
@@ -107,6 +109,7 @@ void splitComp(T in[], T real[], T imag[], int nElem){
  * @post:
  *    - out is now filled
  */
+
 template <class T>
 void compMerge(T real[], T imag[], T out[], int nElem){
   int c=0;

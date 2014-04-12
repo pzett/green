@@ -8,21 +8,16 @@
 using namespace std;
 
 
+extern int  filter_phase(complex<double> * data, int data_size, double phi_hat, complex<double> * train, int train_size, double Q0, double sigma_phi_sqr, double sigma_m_sqr, complex<double> * out );
+
+template <class T >
+extern T mod(T x, T y);
+
 #define PI  3.14159265359
 
 #define DispVal(X) std::cout << #X << " = " << X<< std::endl
 
 
-/** Modulus after division
- *
- * @pre:
- *    - x: Numerator
- *    - y: Denominator
- *                            
- *
- * @post:
- *    - modulus after division computed
- */
 template <class T >
 T mod(T x, T y){
   
@@ -34,44 +29,6 @@ T mod(T x, T y){
 
 }
 
-/** Function is supposed to filter the phase offset using state space model,
-* it is a Kalman filter in a particular case with known phi_hat:
-*
-*         B(n)A+B(n)+A
-* B(n+1)=--------------- 
-*            B(n)+A
-*   
-*             A                     B(n) 
-* phi(n+1)=--------phi(n)  +    ---------*phi(n+1)
-*           B(n)+A                 B(n)+A  
-*           Q0
-*  B0=-------------- +1
-*       sigma_phi^2
-*
-*  sigma_phi_sqr=pi/4*1/number of bits transmitted
-*  
- * @pre:
- *    - rx_data: pointer to complex array of downsampled data without guard bits; the first bit is the 
- *              first bit from the training sequence
- *    - data_size: size of received data
- *    - phi_hat: estimated angle from sync_catch
- *    - train: pointer to complex array with train sequence
- *    - train_size: size of train sequence
- *    - Q0: depend on the length of the training sequence: pi^2/8;
- *    - nElemIN: the size of x[] and y[]
- *    -sigma_phi_sqr : is defined as a constant term (here,as we have already 
- *               removed the free offset: should be low, for example: 10^-3
- *               sigma_phi_sqrt = pi/4*1/number of bits transmitted.
- *     -sigma_m_sqr   - may vary in time. 
- *     -out: data filtered
- *
- * @post:
- *    - out is now filtered
- *    - returns total number of data samples
- *
- */
-
-
 
 int filter_phase(complex<double> * data, int data_size, double phi_hat, complex<double> * train, int train_size, double Q0, double sigma_phi_sqr, double sigma_m_sqr, complex<double> * out ){
   
@@ -79,11 +36,13 @@ int filter_phase(complex<double> * data, int data_size, double phi_hat, complex<
   double a=sigma_m_sqr/sigma_phi_sqr;
 
   
+
   int total_samps=data_size-train_size;
   
   double e, phi_mes_estimated, phi;
 
   double res_mod ,mod1, mod2, angle;
+  
    
 
   phi=phi_hat;
@@ -105,6 +64,7 @@ int filter_phase(complex<double> * data, int data_size, double phi_hat, complex<
 
   complex<double> arg1;
 
+ 
 
   for(int i2=train_size; i2<data_size ; i2++ ){
     e=b+a;
@@ -120,6 +80,8 @@ int filter_phase(complex<double> * data, int data_size, double phi_hat, complex<
     
   }
   //attention, here we assume the QPSK mapping and this formula is not very good, we should change it
+
+  
 
   return total_samps;
 

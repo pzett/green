@@ -74,18 +74,24 @@ int synch(complex<double> dataC[], int nElem, complex<double> trainC[], int nEle
 
   if(nElem<nElemT){cerr << "The training sequence is too big compare to datas";}
 
-  //Takes the conjugate
-  complex<double> trainCC[nElemT];
-  for (int i=0; i<nElemT; i++){
-    trainCC[i]=conj(trainC[i]);
-  }
+  // int norm=0;
+  // for(int i;i<nElemT;i++){
+  //   norm=norm+abs(trainC[i]);
+  // }
+  // norm=norm/nElemT;
+
+  //Takes the conjugate - > Problem at the receiver
+  // complex<double> trainCC[nElemT];
+  // for (int i=0; i<nElemT; i++){
+  //   trainCC[i]=conj(trainC[i]);
+  // }
 
   complex<double> xcorr[nElem];
   // Do the multiplication element wise
   for (int i=0;i<nElem-nElemT+1;i++){
     xcorr[i]=complex<double> (0,0);
     for (int ii=0;ii<nElemT;ii++){
-      xcorr[i]=xcorr[i]+dataC[i+ii]*trainCC[ii];
+      xcorr[i]=xcorr[i]+dataC[i+ii]*trainC[ii];
     }
     //cout << "xcorr " << i << "= " << xcorr[i]<<"\n";
   }
@@ -98,10 +104,16 @@ int synch(complex<double> dataC[], int nElem, complex<double> trainC[], int nEle
     double tmp=abs(xcorr[i]);
     if (tmp> max){
       max=tmp;
-      index=i;
+      index=i+2;//Some problem over here also
     }
   }
   *phase=arg(trainC[index]);
+
+   // Save data to file
+     std::ofstream ofs4( "xcorr.dat" , std::ifstream::out );
+     ofs4.write((char * ) xcorr,2*nElem*sizeof(double));
+     ofs4.close();
+
   return index;
 }
 
@@ -151,11 +163,11 @@ double freqOff(cvec data){
 }
 
 void matchedFilter(double data_compl[],int dataLength,double output[], int outLength){
-  double a[] = {4.0};
+  double a[] = {1.0};
   double b[] = {1.0,1.0,1.0,1.0};
   int nElemA = 1;
   int nElemB = 4;
-  filterComp(b,nElemB,a,nElemA,data_compl,output,dataLength);
+  filterComp(b,nElemB,a,nElemA,data_compl, output, dataLength);
 }
 
 template<class T>
@@ -170,25 +182,25 @@ void hold(T data[], T out[], int Q, int nElem){
 }
 
 
-void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[], int nDataC){
+void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[], int nDataB){
 
 double freqOffset=0.0;
-
+ 
+  //Conversion to double -> More precision in processing
   double buff_double[buffersize];
   for(int k=0;k<buffersize;k++){
     buff_double[k] =(double) buff_short[k];
   }
   cvec buff_cvec = arrayToCvec(buff_double,buffersize);
 
-  //cout << " buff_cvec: " << buff_cvec << endl;
+  //Frequency Offset computation
   freqOffset=freqOff(buff_cvec);
   std::cout << "freqOffset= " << freqOffset << std::endl;
 
- 
 
   const double pi = std::acos(-1);
 
-  // multiplying elementwise and getting x_complD out!
+  // multiplying elementwise and getting x_complD 
   double complExp[buffersize];
   double x[buffersize];
  
@@ -204,6 +216,11 @@ double freqOffset=0.0;
      
       counter++;
     };
+
+  // Save data to file
+     std::ofstream ofs( "x_freq.dat" , std::ifstream::out );
+     ofs.write((char * ) x, buffersize*sizeof(double));
+     ofs.close();
 
  
 
@@ -224,37 +241,35 @@ double freqOffset=0.0;
   
   std::cout << " Frequency Offset Removed! " << std::endl;
 
-  // matched filtering
+
+
+
+  /////////////////////////// matched filtering//////////////////////
   double x_matchedFilt [buffersize];
+
   matchedFilter(x, buffersize, x_matchedFilt, buffersize);
 
-    // Save data to file
-     std::ofstream ofs1( "x_matched.dat" , std::ifstream::out );
-     ofs1.write((char * ) x_matchedFilt, buffersize*sizeof(double));
-     ofs1.close();
+   
   
-
-  // FILE * xFilt;
-  // xFilt = fopen("multiplyer.bin","wb");
-  // fwrite(x_matchedFilt,sizeof(double), buffersize, xFilt);
-  // fclose(xFilt);
 
  
   std::cout << " Matched Filtered! " << std::endl;
 
   // synchronization
-  int nTrainSeq = 100*2;
+  int nTrainSeq = 100;
   std::complex<double> trainSeq[nTrainSeq];
   double phase=0.0;
   
   // Loading the training sequence
   std::ifstream ifs3( "train_norm.dat" , std::ifstream::in );
-  ifs3.read((char * )trainSeq,nTrainSeq*sizeof(double));
+  ifs3.read((char * )trainSeq,2*nTrainSeq*sizeof(double));
   ifs3.close();
 
-  // for(int k=0;k<100;k++){
-  // std::cout << trainSeq[k] << std::endl;
+  // for(int i=0; i<nTrainSeq; i++){
+  //   DispVal(trainSeq[i]);
   // }
+
+
   // for(int k=0;k<100;k++){
   // std::cout << x_matchedFilt[k] << std::endl;
   // }
@@ -265,36 +280,41 @@ double freqOffset=0.0;
      count++;
    }
 
+    // Save data to file
+     std::ofstream ofs1( "x_matched.dat" , std::ifstream::out );
+     ofs1.write((char * ) x_matchedFiltC, buffersize*sizeof(double));
+     ofs1.close();
+
    
    int Q=4;
 
    std::complex<double> trainSeqUp[Q*nTrainSeq];
    
-
    hold(trainSeq, trainSeqUp,Q, nTrainSeq);
 
   int delay = synch(x_matchedFiltC,buffersize/2,trainSeqUp, Q*nTrainSeq, &phase);
-  //std::cout << " " << std::endl;
-  //std::cout << delay << std::endl;
-  //std::cout << phase << std::endl;
+  
+
+  DispVal(phase);
+  DispVal(delay);
 
   std::cout << " Synchronized! " << std::endl;
 
-  //int nDataC=6250;
+  int nDataC=6250/2;
+  int nDataTrain=nDataC+nTrainSeq;
+  DispVal(nDataTrain);
   // downsampling
-  std::complex<double> x_downsampled[nTrainSeq+nDataC];
-  int iter = 0;
-  for(int i=0;i<4*(nTrainSeq+nDataC);i=i+4){
-    x_downsampled[iter]=x_matchedFiltC[delay+i];
-    iter++;
+  std::complex<double> x_downsampled[nDataTrain];
+  for(int iter=0;iter<nDataTrain ;iter++){
+    x_downsampled[iter]=x_matchedFiltC[delay+iter*4];
   }
-  
-  DispVal(delay);
 
+  // Save data to file
+     std::ofstream ofs2( "x_downsamp.dat" , std::ifstream::out );
+     ofs2.write((char * ) x_downsampled, 2*(nTrainSeq+nDataC)*sizeof(double));
+     ofs2.close();
   
-
- 
- 
+  
 
   std::cout << " Downsampled! " << std::endl;
 
@@ -310,11 +330,16 @@ double freqOffset=0.0;
   DataFilt= new complex<double>[nDataC];  
   
   
-  int nDataCConf = filter_phase( x_downsampled, nTrainSeq+nDataC , phase, trainSeq, nTrainSeq, 0.01, 0.01, 0.01, DataFilt);
+  int nDataCConf = filter_phase( x_downsampled, nDataTrain, phase, trainSeq, nTrainSeq, 0.01, 0.01, 0.01, DataFilt);
 
   // for(int k=0;k<nDataC;k++){
   //     std::cout << DataFilt[k] << std::endl;
   // }
+
+   // Save data to file
+     std::ofstream ofs3( "x_filt.dat" , std::ifstream::out );
+     ofs3.write((char * ) DataFilt, 2*nDataC*sizeof(double));
+     ofs3.close();
 
 
   if(nDataCConf!=nDataC){
@@ -323,15 +348,18 @@ double freqOffset=0.0;
   }
     
 
-  
-  DispVal(phase);
 
   //std::cout << " Phase Filteres! " << std::endl;
 
   // detect
   
+  // Error to be solved
+  // for(int i=0;i<nDataC;i++){
+  //   DataFilt[i]=conj(DataFilt[i]);
+  // }
 
   hardDetect(DataFilt, data_bin, nDataC);
+
 
   std::cout << " Detected! " << std::endl;
 
