@@ -1,5 +1,12 @@
 //Functions of the transmitter 
 
+#include <algorithm>
+#include <iostream>
+#include <fstream>
+#include <cmath>
+
+#include "tx_funct_2.hpp"
+
 using namespace std;
 
 /** Transfer the information bits to a QPSK constellation
@@ -47,7 +54,7 @@ void imp_1(short allUp[]){
 // QPSK, 1st imp
 
 int nData=6250;
- int nTrain=100*2; // To store complex part *2
+int nTrain=100*2; // To store complex part *2
 int nPref=500*2;
 int nGuard=10*2;
 short amp=7000;
@@ -62,11 +69,11 @@ double train[nTrain];
 std::ifstream ifs( "train_norm.dat" , std::ifstream::in );
 ifs.read((char * )train,nTrain*sizeof(double));
 ifs.close();
-/*
- for (int i=0;i<2*4;i++){
-   cout << "Train["<<i<<"] = " << train[i]<<"\n";
- }
-*/
+
+ // for (int i=0;i<2*100;i++){
+ //   cout << "Train["<<i<<"] = " << train[i]<<"\n";
+ // }
+
 
 // Create storage for Data //////////////////////////////
 double Data[nData];

@@ -30,8 +30,8 @@
 #include <stdlib.h>
 #include <fstream>
 
-//#include "funct_general.hpp"
 #include "tx_funct_2.hpp"
+
 
 
 namespace po = boost::program_options;
@@ -149,10 +149,13 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
     //for (int i=0; i<500;i++){cout << buffer[i] << "\n";}
     */
-    FILE * xFile;
-    xFile = fopen("sent.dat","wb");
-    fwrite(buffer, 2*sizeof(short),nAll/2,xFile);
-    fclose(xFile);
+
+     
+
+    // FILE * xFile;
+    // xFile = fopen("sent.dat","wb");
+    // fwrite(buffer, 2*sizeof(short),nAll/2,xFile);
+    // fclose(xFile);
 
     //ATENTION:Always convert to complex<short> to send to the USRP transmitter
 
@@ -160,6 +163,12 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     
   };
  /////////////////////////////////////////////////////////////////////////
+
+  // Save data to file
+     std::ofstream ofs( "sentx_downsamp.dat" , std::ifstream::out );
+     ofs.write((char * ) buffer, nAll*sizeof(short));
+     ofs.close();
+
 
     //create a USRP device and streamer
     dev_addr["addr0"]="192.168.10.2";
