@@ -34,9 +34,10 @@ Y=zeros(length(rx_data)-length(train),1);
 for i=1:length(train)
     E=B+A;
     phi_mes_estimated=angle(rx_data(i)*conj(train(i))); %Attention, for good result this angle should be defined between -pi and pi
-    phi=A/E*mod(phi_mes_estimated-phi,2*pi)+phi;                  % measurment update
+    phi=A/E*(mod(phi_mes_estimated-phi+pi,2*pi)-pi)+phi;                  % measurment update
     B=B/E+1;
 end
+
 for i=length(train)+1:length(rx_data)
     E=B+A;
     phi_mes_estimated=(mod(angle(rx_data(i))-phi,pi/2))-pi/4;   % attention, here we assume the QPSK mapping and this formula is not very good, we should change it

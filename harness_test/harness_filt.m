@@ -5,7 +5,43 @@ clear all;
 close all;
 
 % Read data from file
-load('test_function_filter_phase.mat')
+%load('test_function_filter_phase.mat')
+
+%data
+
+fid1=fopen('x_downsamp.dat','r');
+x_downsamp=fread(fid1, 2*3225,'double');
+fclose(fid1);
+
+
+xComplex_downsamp= zeros(1,3225);
+count = 1;
+for i=1:2:3225*2
+    xComplex_downsamp(count) = complex(x_downsamp(i),x_downsamp(i+1));
+    count = count+1;
+end
+
+length(xComplex_downsamp);
+
+rx_mod=xComplex_downsamp;
+
+
+%train
+fid1=fopen('train_norm.dat','r');
+x=fread(fid1,100*2,'double');
+fclose(fid1);
+
+tComplex= zeros(1,100);
+count = 1;
+for i=1:2:100*2
+    tComplex(count) = complex(x(i),x(i+1));
+    count = count+1;
+end
+
+
+train=tComplex;
+
+phi_hat=0;
 
 
 temp=zeros(1,2*length(train));
@@ -42,22 +78,25 @@ fid=fopen('data_from_harness.dat','r');
 temp=fread(fid,2*(length(rx_mod)-length(train)),'double');
 fclose(fid);
 
+
 % Run the matlab implementation
 result_from_matlab=filter_phase(rx_mod, phi_hat, train, 0.01, 0.01,0.01);
 
-result_from_harness=zeros(1,length(temp)/2);
+
+
+result_from_harness=zeros(length(temp)/2,1);
 i2=1;
 for i1=1:2:length(temp)
-   result_from_harness(i2)=temp(i1)+i*temp(i1+1);
+   result_from_harness(i2)=complex(temp(i1),temp(i1+1));
    i2=i2+1;
 end;
 
 figure(1);
 hold off
-plot(result_from_harness,'ok');
+plot(result_from_harness,'.');
 hold on
-plot(result_from_matlab,'-x');
+plot(result_from_matlab,'o');
 legend('C++ implementation (harness)','matlab implementation');
-axis([-1000 1000 -1000 1000])
+%axis([-1000 1000 -1000 1000])
 
-ERROR=sum(abs(result_from_harness-result_from_matlab.'))
+ERROR=sum(abs(result_from_harness-result_from_matlab))

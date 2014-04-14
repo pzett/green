@@ -132,10 +132,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     //    DispVal(ii);
     //  };
 
+    DispVal(res_size);
      // Save data to file
-     std::ofstream ofs( "data_from_harness.dat" , std::ifstream::out );
-     ofs.write((char * )res, 4*res_size*sizeof(float));
-     ofs.close();
+     std::ofstream ofs1( "data_from_harness.dat" , std::ifstream::out );
+     ofs1.write((char * )res, 2*res_size*sizeof(double));
+     ofs1.close();
 
     
     return 0;

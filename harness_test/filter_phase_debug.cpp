@@ -43,30 +43,35 @@ int filter_phase(complex<double> * data, int data_size, double phi_hat, complex<
 
   double res_mod ,mod1, mod2, angle;
   
-   
-
+  // double oi=mod((double)4.45,(double) 3.35); 
+  
+  // DispVal(oi);
+  
   phi=phi_hat;
 
   
   for(int i1=0; i1<train_size; i1++){
     e=b+a;
     phi_mes_estimated=arg(data[i1]*conj(train[i1]));
-    mod1=phi_mes_estimated-phi;
+    mod1=phi_mes_estimated-phi+PI;
     mod2 = 2*PI;
     res_mod=mod(mod1,mod2);
    
-    phi=(a/e)*(res_mod)+phi;
+    phi=(a/e)*(res_mod-PI)+phi;
     b=1+b/e;
-   
     
   }
-  //Attention, for good result this angle should be defined between -pi and pi
+
+  DispVal(a); 
+ DispVal(b); 
+ DispVal(phi);
+ DispVal(phi_mes_estimated); 
+//Attention, for good result this angle should be defined between -pi and pi
 
   complex<double> arg1;
 
- 
 
-  for(int i2=train_size; i2<data_size ; i2++ ){
+  for(int i2=train_size,count=0; i2<data_size ; i2++ ){
     e=b+a;
     angle=arg(data[i2]);
     mod1=angle-phi;
@@ -76,8 +81,8 @@ int filter_phase(complex<double> * data, int data_size, double phi_hat, complex<
     phi=(a/e)*(phi_mes_estimated)+phi;
     b=b/e+1;
     arg1=complex<double>(0,-1*phi);
-    out[i2-train_size]=data[i2]*exp(arg1);
-    
+    out[count]=data[i2]*exp(arg1);
+    count++;
   }
   //attention, here we assume the QPSK mapping and this formula is not very good, we should change it
 
