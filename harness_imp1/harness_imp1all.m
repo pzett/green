@@ -1,18 +1,46 @@
 % harness.m
 % For more information search for "README:" in harness.cpp.
 
-clear ;
+clear all;
 close all;
 
 % Read data from file -> rx_data
 load('rx_test.mat');
-rx_data_test=5000*rx_data_test;
+
+
+% fid1=fopen('sent.dat','r');
+% x=fread(fid1,55680,'short');
+% fclose(fid1);
+% 
+% xComplex= zeros(1,55680/2);
+% count = 1;
+% for i=1:2:55680
+%     xComplex(count) = complex(x(i),x(i+1));
+%     count = count+1;
+% end
+% 
+% plot(real(xComplex))
+
+
+
+rx_data_test=rx_data_test*10;
+
+
 %plot(abs(fft(rx_data_test,2^20)))
+
+
 temp=zeros(1,2*length(rx_data_test));
 for i1=1:size(rx_data_test,2)
    temp(i1*2-1)=real(rx_data_test(1,i1));
    temp(i1*2-0)=imag(rx_data_test(1,i1));
 end;
+
+[max_data,~]=max(temp);
+
+if(max_data>3.276e4)
+        display('Out of range!!!!!')
+       break
+end
 
 % Write to file (note the type of the data used)
 fid=fopen('data_to_harness.dat','w');
@@ -75,7 +103,6 @@ imp1_rx_sim
 
 
 
-
 % Load data from file (note the type)
 fid=fopen('data_from_harness.dat','r');
 temp=fread(fid, nr_data_bits ,'short');
@@ -109,13 +136,13 @@ length(rx_data_detect);
 BER_MATLAB=sum(abs(data_correct.'-rx_data_detect))/6250
 
 subplot(3,2,6)
-plot(abs(rx_data_detect'-data_correct)/2);
+plot(abs(rx_data_detect'-data_correct));
 title('Matlab Rx processing');
 
 figure(2)
 cppresults
 subplot(3,2,6)
-plot(abs(result_from_harness-data_correct)/2);
+plot(abs(result_from_harness-data_correct));
 title('C++ Rx processing');
 
 

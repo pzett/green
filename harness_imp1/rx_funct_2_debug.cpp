@@ -80,18 +80,18 @@ int synch(complex<double> dataC[], int nElem, complex<double> trainC[], int nEle
   // }
   // norm=norm/nElemT;
 
-  //Takes the conjugate - > Problem at the receiver
-  // complex<double> trainCC[nElemT];
-  // for (int i=0; i<nElemT; i++){
-  //   trainCC[i]=conj(trainC[i]);
-  // }
+  // Takes the conjugate - > Problem at the receiver
+  complex<double> trainCC[nElemT];
+  for (int i=0; i<nElemT; i++){
+    trainCC[i]=conj(trainC[i]);
+  }
 
   complex<double> xcorr[nElem];
   // Do the multiplication element wise
   for (int i=0;i<nElem-nElemT+1;i++){
     xcorr[i]=complex<double> (0,0);
     for (int ii=0;ii<nElemT;ii++){
-      xcorr[i]=xcorr[i]+dataC[i+ii]*trainC[ii];
+      xcorr[i]=xcorr[i]+dataC[i+ii]*trainCC[ii];
     }
     //cout << "xcorr " << i << "= " << xcorr[i]<<"\n";
   }
@@ -104,7 +104,7 @@ int synch(complex<double> dataC[], int nElem, complex<double> trainC[], int nEle
     double tmp=abs(xcorr[i]);
     if (tmp> max){
       max=tmp;
-      index=i+2;//Some problem over here also
+      index=i;//Some problem over here also
     }
   }
   *phase=arg(trainC[index]);
@@ -171,11 +171,13 @@ void matchedFilter(double data_compl[],int dataLength,double output[], int outLe
 }
 
 template<class T>
-void hold(T data[], T out[], int Q, int nElem){
+void hold_zeros(T data[], T out[], int Q, int nElem){
   int c=0;
   for (int i=0; i<nElem;i++){
     for (int d=0;d<Q;d++){
-    out[c+d]=data[i];
+    
+      if(d==0) out[c+d]=data[i];
+      else out[c+d]=0.0;
     }
     c=c+Q;
   }
@@ -213,6 +215,10 @@ double freqOffset=0.0;
       // Multiplying the complex arrays elementwise 
       x[f]=complExp[f]*buff_double[f] - complExp[f+1]*buff_double[f+1]; // real part
       x[f+1]=complExp[f]*buff_double[f+1] + complExp[f+1]*buff_double[f]; //imag part
+
+      //just debugging
+      // x[f]=buff_double[f];
+      // x[f+1]=buff_double[f+1];
      
       counter++;
     };
@@ -290,11 +296,11 @@ double freqOffset=0.0;
 
    std::complex<double> trainSeqUp[Q*nTrainSeq];
    
-   hold(trainSeq, trainSeqUp,Q, nTrainSeq);
+   hold_zeros(trainSeq, trainSeqUp, Q, nTrainSeq);
 
   int delay = synch(x_matchedFiltC,buffersize/2,trainSeqUp, Q*nTrainSeq, &phase);
   
-
+  
   DispVal(phase);
   DispVal(delay);
 
@@ -302,16 +308,16 @@ double freqOffset=0.0;
 
   int nDataC=6250/2;
   int nDataTrain=nDataC+nTrainSeq;
-  DispVal(nDataTrain);
+  //DispVal(nDataTrain);
   // downsampling
   std::complex<double> x_downsampled[nDataTrain];
-  for(int iter=0;iter<nDataTrain ;iter++){
+  for(int iter=0;iter<nDataTrain;iter++){
     x_downsampled[iter]=x_matchedFiltC[delay+iter*4];
   }
 
   // Save data to file
      std::ofstream ofs2( "x_downsamp.dat" , std::ifstream::out );
-     ofs2.write((char * ) x_downsampled, 2*(nTrainSeq+nDataC)*sizeof(double));
+     ofs2.write((char * ) x_downsampled, 2*(nDataTrain)*sizeof(double));
      ofs2.close();
   
   
@@ -349,7 +355,7 @@ double freqOffset=0.0;
     
 
 
-  //std::cout << " Phase Filteres! " << std::endl;
+  std::cout << " Phase Filtered! " << std::endl;
 
   // detect
   

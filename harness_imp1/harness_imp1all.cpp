@@ -77,22 +77,24 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     // Program options end
 
 
+    
     // Create storage for the input
     short * buff_short;
     buff_short= new short[buffer_size];
 
 
-
     // Read data from file
     std::ifstream ifs_data( "data_to_harness.dat" , std::ifstream::in );
-    ifs_data.read((char * ) buff_short,buffer_size*sizeof(float));
+    ifs_data.read((char * ) buff_short, buffer_size*sizeof(short));
     ifs_data.close();
 
+   
 
-    // for(int ii=buffer_size-10;ii<buffer_size;ii++){
-    //   DispVal(buff_short[ii]);
-    //   DispVal(ii);
-    // };
+
+    for(int ii=buffer_size-20;ii<buffer_size;ii++){
+      DispVal(buff_short[ii]);
+      DispVal(ii);
+    };
     
     // Call the function
     short * data_bin;
