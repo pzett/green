@@ -65,20 +65,30 @@ void filter(double b[], int nElemB, double a[], int nElemA, double x[], double y
 }
 
 
-double powerTotArray(short data[], int no_elements)
-{
-  double power = 0.0;
-  double tmp;
+/** Computes the power of the given array
+ * @pre:
+ *       - data: a pointer to an array of short
+ *       - no_elements: the length of the array
+ * @post:
+ *       - power: a float with the power
+ */
+float powerTotArray( short data[], int no_elements){
+  float power=0;
+  float tmp;
   for (int i=0;i<no_elements;i++){
-    tmp= (double)data[i];
+    tmp= (float) data[i];
     power= power+(tmp*tmp)/(no_elements/2);
     if(power<0){
       std::cout<<power;
     };
-  }
-  return power;
-}
 
+  };
+  //float result=0;
+  // std::cout<<power<<"\n";
+  // std::cout<<(short)power<<"\n";
+  return power;
+};
+/*
 double powerTotArray(double data[], int no_elements)
 {
   double power = 0.0;
@@ -92,7 +102,8 @@ double powerTotArray(double data[], int no_elements)
   }
   return power;
 }
-
+*/
+ /*
 bool transmissionDetection(double buff_double[],int nSamp){
   bool transmissionDetected = false;
   double threshold = 1000;
@@ -123,3 +134,4 @@ bool transmissionDetection(double buff_double[],int nSamp){
     }
   return transmissionDetected;
 }
+ */

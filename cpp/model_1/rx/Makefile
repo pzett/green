@@ -1,5 +1,5 @@
 #==============================================================
-CXXFLAGS = -o3 -o -Wall -DNDEBUG -std=c++0x -lpthread #`itpp-config --cflags`
+CXXFLAGS = -o3 -Wall -DNDEBUG -std=c++0x -lpthread # `itpp-config --cflags`
 LDLIBS = -luhd -lboost_program_options #`itpp-config --libs`
 
 #==============================================================
@@ -12,7 +12,7 @@ clean:
 	rm -f rx_3 
 #==============================================================
 
-rx: rx_3.o threads.o threads.hpp
+rx_3: rx_3.o threads.o threads.hpp
 
 	$(CXX) -o $@ $^ $(LDLIBS) 
 #==============================================================

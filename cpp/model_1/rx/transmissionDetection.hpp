@@ -1,6 +1,7 @@
 #include <cmath>
 #include <complex> 
 #include <stdlib.h>
+#include <iostream>
 
 #include "transmissionDetection.cpp"
 
@@ -26,8 +27,6 @@
  */
 void filter(double b[], int nElemB, double a[], int nElemA, double x[], double y[], int nElemIN);
 
-double powerTotArray(short data[], int no_elements);
-
-double powerTotArray(double data[], int no_elements);
+float powerTotArray( short data[], int no_elements);
 
 bool transmissionDetection(double buff_double[],int nSamp);

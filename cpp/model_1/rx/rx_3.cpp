@@ -17,7 +17,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
-
+// Threads initialisation
+#include <mutex>
+#include <thread>         // std::thread, std::this_thread::yield
+#include <queue>         // std::vector
+#include <semaphore.h>
 
 #include <fstream> // PZ
 #include <uhd/utils/thread_priority.hpp>
@@ -41,25 +45,163 @@
 //#include "funct_general.hpp"
 //#include "rx_funct.hpp"
 
-#include "transmissionDetection.hpp"
-#include "threads.cpp"
 
-// Threads initialisation
-#include <mutex>
-#include <thread>         // std::thread, std::this_thread::yield
-#include <queue>         // std::vector
-
-
-using namespace std;
 
 std::thread *detectionT, *storeT, *displayT;
-queue<bool> isReady;
-queue<short*> bufferQ;
-mutex mtx;
+sem_t isReady;
+std::queue<short*> bufferQ;
+std::mutex mtx;
+std::mutex mtxQ;
 
-
-
+//#include "threads.cpp"
+//#include "transmissionDetection.cpp"
 namespace po = boost::program_options;
+
+long countDetect=0;
+
+/** Computes the power of the given array
+ * @pre:
+ *       - data: a pointer to an array of short
+ *       - no_elements: the length of the array
+ * @post:
+ *       - power: a float with the power
+ */
+float powerTotArray( short data[], int no_elements){
+  float power=0;
+  float tmp;
+  for (int i=0;i<no_elements;i++){
+    tmp= (float) data[i];
+    power= power+(tmp*tmp)/(no_elements/2);
+    if(power<0){
+      std::cout<<power;
+    };
+
+  };
+  //float result=0;
+  // std::cout<<power<<"\n";
+  // std::cout<<(short)power<<"\n";
+  return power;
+};
+
+
+void storeDataX(uhd::rx_streamer::sptr rx_stream, size_t buffer_size, uint nDetect){
+
+  float power;
+
+  // Create storage for a single buffer from USRP
+  short *buff_short;
+  buff_short=new short[2*buffer_size]; 
+ 
+  short *storage_short;
+  storage_short=new short [2*nDetect];
+
+  
+  size_t n_rx_last;
+  uhd::rx_metadata_t md;
+  size_t n_rx_samps=0;
+  int time=buffer_size/(25); // microsecondes
+
+  while (1){
+    n_rx_samps=0;
+    // Fill the storage buffer loop
+    while (n_rx_samps<nDetect){
+      n_rx_last=0;
+      // Fill buff_short
+      while (n_rx_last==0) {
+	n_rx_last=rx_stream->recv(&buff_short[0], buffer_size, md, 3.0);
+	//std::this_thread::yield();
+      };
+      // Check if no overflow
+      if (n_rx_last!=buffer_size) {
+	std::cerr << "I expect the buffer size to be always the same!\n";
+	std::cout<<"Read only:"<<n_rx_last<<"\n";
+	std::cout<<"Buffer:"<<buffer_size<<"\n";
+	exit(1); 
+      };
+      /*
+      // Fill storage
+      int i1=2*n_rx_samps;
+      int i2=0;   
+      while ((i1<(int) (2*nDetect)) && (i2<2*((int) buffer_size))){	  
+	storage_short[i1]=buff_short[i2];
+	i1++; i2++;
+      };
+      */
+      //storage_short=buff_short;
+      n_rx_samps=n_rx_samps+n_rx_last;
+      //std::cout << "n_rx_samps=" << n_rx_samps  << std::endl;	 
+    }//storage_short now full
+
+    /*
+    power=powerTotArray(storage_short, (int)2*nDetect);
+    mtx.lock();
+    std::cout << countDetect  <<" power stored " << power << std::endl; 
+    mtx.unlock();
+    */
+    /*
+    mtxQ.lock();
+    bufferQ.push(storage_short);
+    mtxQ.unlock();
+    storage_short=new short [2*nDetect]; // Change memory cell used
+    */
+
+    mtxQ.lock();
+    bufferQ.push(buff_short);
+    mtxQ.unlock();
+    buff_short=new short [2*buffer_size]; // Change memory cell used
+
+    //usleep(1000000/4);
+    sem_post( &isReady); // Gives the start to detection part
+
+    //std::this_thread::sleep_for(std::chrono::microseconds(time));
+
+    //int a=0;
+    //sem_getvalue(&isReady, &a);
+    //if (a>1000){std::cout << "Computer overload" << std::endl; exit(1);}
+
+    //countDetect++;
+  }//end while 1
+}
+
+void detection(uint nDetect){
+  int count2=0;
+  float power2;
+  while(1){
+    // wait for the full buffer
+    sem_wait(&isReady);
+
+    //Do something here with the just received buffer
+    /*
+    usleep(1000000/4);
+    mtx.lock();
+    cout << "Value queue ... " << " [" << (bufferQ.front())[0] << "," << (bufferQ.front())[1] << "]" << endl;
+    mtx.unlock();
+    */
+    short *p=bufferQ.front();
+
+    power2=powerTotArray(p, (int)2*nDetect);
+    //std::this_thread::yield();
+    if (power2>100){
+      //mtx.lock();
+      std::cout<< count2 << " power detect " << power2 << std::endl; 
+      //mtx.unlock();
+    }
+    //std::thread displayT(display,power);
+
+    // Relase the element
+    //std::this_thread::yield();
+    delete[] (bufferQ.front());
+    mtxQ.lock();
+    bufferQ.pop();
+    mtxQ.unlock();
+    //std::this_thread::yield();
+    count2++;
+  }
+}
+
+
+
+
 
 int UHD_SAFE_MAIN(int argc, char *argv[]){
     
@@ -198,9 +340,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     usleep(1e6); // Wait for the 10MHz to lock
   }; 
 
-  size_t buffer_size=250; // Select buffer size
+  size_t buffer_size=25000; // Select buffer size
 
-  uint nDetect=1000;
+  uint nDetect=25000;
   short buff_detect[2*nDetect];
 
   short storage_short [2*total_num_samps]; // Create storage for the entire received signal to be saved on disk (2* for handling complex).
@@ -233,8 +375,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
   dev->issue_stream_cmd(stream_cmd);
 
   //Launch threads
-  isReady.push(false); // security false
-  std::thread storeT(storeData, rx_stream, buffer_size, nDetect);
+  sem_init(&isReady, 0,0); 
+  std::thread storeT(storeDataX, rx_stream, buffer_size, nDetect);
   std::thread detectionT(detection, nDetect);
 
   storeT.join();
