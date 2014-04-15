@@ -42,22 +42,16 @@
 // #include <itpp/itbase.h>
 // #include <itpp/itsignal.h>
 
-//#include "funct_general.hpp"
-//#include "rx_funct.hpp"
 
+std::thread *detectionT, *usrpT, *processT;
+sem_t usrpReady, detectionReady;
+std::queue<short*> usrpQ;
+std::queue<short*> storageQ;
+std::mutex mtx; //cout
+std::mutex mtxUsrp;
+std::mutex mtxDetection;
 
-
-std::thread *detectionT, *storeT, *displayT;
-sem_t isReady;
-std::queue<short*> bufferQ;
-std::mutex mtx;
-std::mutex mtxQ;
-
-//#include "threads.cpp"
-//#include "transmissionDetection.cpp"
 namespace po = boost::program_options;
-
-long countDetect=0;
 
 /** Computes the power of the given array
  * @pre:
@@ -77,125 +71,137 @@ float powerTotArray( short data[], int no_elements){
     };
 
   };
-  //float result=0;
-  // std::cout<<power<<"\n";
-  // std::cout<<(short)power<<"\n";
   return power;
 };
 
+// Processing thread nStorage: size of the array
+void processing(int nStorage){
+  short *data;
+  while(1){
+    // Ask for data
+    sem_wait(&detectionReady);
+    data=detectionQ.front();
 
-void storeDataX(uhd::rx_streamer::sptr rx_stream, size_t buffer_size, uint nDetect){
+    //Do something heavy with data
+    // Save data to file
+    std::ofstream ofs( "received_burst.dat" , std::ifstream::out );
+    ofs.write((char * ) data, nStorage*sizeof(short));
+    ofs.close();
+    std::cout << "Finish Writing to file";
 
-  float power;
+    //Release the memory
+    delete[] (detectionQ.front());
+    mtxDetection.lock();
+    detectionQ.pop();
+    mtxDetection.unlock();
+    exit(1);
+  }
+}
+
+// Thread to import data from the USRP !Size of the arrays in complex -> 2*buffer_size !
+void usrpGetData(uhd::rx_streamer::sptr rx_stream,uhd::usrp::multi_usrp::sptr dev, size_t buffer_size){
 
   // Create storage for a single buffer from USRP
   short *buff_short;
   buff_short=new short[2*buffer_size]; 
- 
-  short *storage_short;
-  storage_short=new short [2*nDetect];
 
-  
+  // Initialisation  
   size_t n_rx_last;
   uhd::rx_metadata_t md;
-  size_t n_rx_samps=0;
-  int time=buffer_size/(25); // microsecondes
+  //int time=buffer_size/(25)-100; // microsecondes
 
   while (1){
-    n_rx_samps=0;
-    // Fill the storage buffer loop
-    while (n_rx_samps<nDetect){
-      n_rx_last=0;
-      // Fill buff_short
-      while (n_rx_last==0) {
-	n_rx_last=rx_stream->recv(&buff_short[0], buffer_size, md, 3.0);
-	//std::this_thread::yield();
-      };
-      // Check if no overflow
-      if (n_rx_last!=buffer_size) {
-	std::cerr << "I expect the buffer size to be always the same!\n";
-	std::cout<<"Read only:"<<n_rx_last<<"\n";
-	std::cout<<"Buffer:"<<buffer_size<<"\n";
-	exit(1); 
-      };
-      /*
-      // Fill storage
-      int i1=2*n_rx_samps;
-      int i2=0;   
-      while ((i1<(int) (2*nDetect)) && (i2<2*((int) buffer_size))){	  
-	storage_short[i1]=buff_short[i2];
-	i1++; i2++;
-      };
-      */
-      //storage_short=buff_short;
-      n_rx_samps=n_rx_samps+n_rx_last;
-      //std::cout << "n_rx_samps=" << n_rx_samps  << std::endl;	 
-    }//storage_short now full
+    n_rx_last=0;
 
-    /*
-    power=powerTotArray(storage_short, (int)2*nDetect);
-    mtx.lock();
-    std::cout << countDetect  <<" power stored " << power << std::endl; 
-    mtx.unlock();
-    */
-    /*
-    mtxQ.lock();
-    bufferQ.push(storage_short);
-    mtxQ.unlock();
-    storage_short=new short [2*nDetect]; // Change memory cell used
-    */
+    // Fill buff_short
+    while (n_rx_last==0) {
+      n_rx_last=rx_stream->recv(&buff_short[0], buffer_size, md, 3.0);
+      std::this_thread::yield(); // Avoid active waiting
+    };
 
-    mtxQ.lock();
-    bufferQ.push(buff_short);
-    mtxQ.unlock();
-    buff_short=new short [2*buffer_size]; // Change memory cell used
+    // Check if no overflow
+    if (n_rx_last!=buffer_size) {
+      std::cerr << "I expect the buffer size to be always the same!\n";
+      std::cout<<"Read only:"<<n_rx_last<<"\n";
+      std::cout<<"Buffer:"<<buffer_size<<"\n";
+      //exit(1); 
+    };
 
-    //usleep(1000000/4);
-    sem_post( &isReady); // Gives the start to detection part
+    // Add the just received buffer to the queue
+    mtxUsrp.lock();
+    usrpQ.push(buff_short);
+    mtxUsrp.unlock();
+    // Change memory cell used
+    buff_short=new short [2*buffer_size];
 
-    //std::this_thread::sleep_for(std::chrono::microseconds(time));
+    // Gives the start to detection part
+    sem_post( &usrpReady); 
 
-    //int a=0;
-    //sem_getvalue(&isReady, &a);
-    //if (a>1000){std::cout << "Computer overload" << std::endl; exit(1);}
-
-    //countDetect++;
   }//end while 1
 }
 
-void detection(uint nDetect){
-  int count2=0;
-  float power2;
+// Will analyse every buffer from 
+void detection(uint nDetect, int nStorage){
+  bool isDetected=false;
+  int nCurrent=0;
+  short *storage_short;
+  storage_short=new short [nStorage];
+  short *p=0;
+  float power;
+  int i2=0;
   while(1){
-    // wait for the full buffer
-    sem_wait(&isReady);
+    std::this_thread::yield();
+    if (isDetected){
+      // Store the elements in storage_short
+      if (nCurrent<nStorage){
+	// Fill storage_short
+	i2=0;   
+	while ((nCurrent<nStorage) && (i2<2*((int) nDetect))){	  
+	  storage_short[nCurrent]=p[i2];
+	  nCurrent++; i2++;
+	};
+	// Relase the just stored element
+	std::this_thread::yield();
+	delete[] (usrpQ.front());
+	mtxUsrp.lock();
+	usrpQ.pop();
+	mtxUsrp.unlock();
+	std::this_thread::yield();
 
-    //Do something here with the just received buffer
-    /*
-    usleep(1000000/4);
-    mtx.lock();
-    cout << "Value queue ... " << " [" << (bufferQ.front())[0] << "," << (bufferQ.front())[1] << "]" << endl;
-    mtx.unlock();
-    */
-    short *p=bufferQ.front();
-
-    power2=powerTotArray(p, (int)2*nDetect);
-    //std::this_thread::yield();
-    if (power2>100){
-      //mtx.lock();
-      std::cout<< count2 << " power detect " << power2 << std::endl; 
-      //mtx.unlock();
+	//Wait for a new element
+	sem_wait(&usrpReady);
+	p=usrpQ.front();
+      }
+      else{
+	isDetected=false;
+	nCurrent=0;
+	mtxDetection.lock();
+	detectionQ.push(storage_short);
+	mtxDetection.unlock();
+	sem_post(&detectionReady);
+	storage_short=new short[nStorage];
+      }
     }
-    //std::thread displayT(display,power);
-
-    // Relase the element
-    //std::this_thread::yield();
-    delete[] (bufferQ.front());
-    mtxQ.lock();
-    bufferQ.pop();
-    mtxQ.unlock();
-    //std::this_thread::yield();
-    count2++;
+    else{
+      // Wait for new element
+      sem_wait(&usrpReady);
+      p=usrpQ.front();
+      // Test of detection
+      power=powerTotArray(p, (int)2*nDetect);
+      if (power>0){
+	// If detection, keep the element
+	isDetected=true;
+      }
+      else{
+	// Release the element
+	std::this_thread::yield();
+	delete[] (usrpQ.front());
+	mtxUsrp.lock();
+	usrpQ.pop();
+	mtxUsrp.unlock();
+	std::this_thread::yield();
+      }
+    }
   }
 }
 
@@ -230,14 +236,14 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
   po::options_description desc("Allowed options");
   desc.add_options()
     ("help", "help message")
-    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(1000), "total number of samples to receive")
+    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(10000000), "total number of samples to receive")
     ("rxrate", po::value<double>(&rx_rate)->default_value(100e6/4), "rate of incoming samples")
-    ("freq", po::value<double>(&freq)->default_value(5.5e6), "rf center frequency in Hz")
-    ("LOoffset", po::value<double>(&LOoffset)->default_value(10e6), "Offset between main LO and center frequency")
+    ("freq", po::value<double>(&freq)->default_value(5.5e9), "rf center frequency in Hz")
+    ("LOoffset", po::value<double>(&LOoffset)->default_value(0), "Offset between main LO and center frequency")
     ("10MHz",po::value<bool>(&use_external_10MHz)->default_value(false), "external 10MHz on 'REF CLOCK' connector (true=1=yes)")
     //  ("PPS",po::value<bool>(&trigger_with_pps)->default_value(false), "trigger reception with 'PPS IN' connector (true=1=yes)")
     ("filename",po::value<std::string>(&filename)->default_value("data_from_usrp.dat"), "output filename") 
-    ("gain",po::value<float>(&gain)->default_value(30), "set the receiver gain") 
+    ("gain",po::value<float>(&gain)->default_value(15), "set the receiver gain") 
     ("8bits_scaling",po::value<double>(&scaling_8bits)->default_value(0.0), 
      "input scaling (invers) when 8bits is used, set to zero to get 16bits")
       
@@ -340,13 +346,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     usleep(1e6); // Wait for the 10MHz to lock
   }; 
 
-  size_t buffer_size=25000; // Select buffer size
+  size_t buffer_size=1000; // Select buffer USRP and detection size. <25.000
 
-  uint nDetect=25000;
-  short buff_detect[2*nDetect];
-
-  short storage_short [2*total_num_samps]; // Create storage for the entire received signal to be saved on disk (2* for handling complex).
-
+  int nStorage=2*total_num_samps; // Size of the buffer for the processing part
 
   /*if (trigger_with_pps) {
     dev->set_time_next_pps(uhd::time_spec_t(0.0));
@@ -375,12 +377,15 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
   dev->issue_stream_cmd(stream_cmd);
 
   //Launch threads
-  sem_init(&isReady, 0,0); 
-  std::thread storeT(storeDataX, rx_stream, buffer_size, nDetect);
-  std::thread detectionT(detection, nDetect);
+  sem_init(&usrpReady, 0,0); 
+  sem_init(&detectionReady, 0,0);
+  std::thread usrpT(usrpGetData, rx_stream, dev, buffer_size);
+  std::thread detectionT(detection, buffer_size, nStorage);
+  std::thread processT(processing, nStorage);
 
-  storeT.join();
+  usrpT.join();
   detectionT.join();
+  processT.join();
 
   //finished
   std::cout << std::endl << "Done receiving!" << std::endl << std::endl; 
