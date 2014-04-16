@@ -17,7 +17,16 @@ extern T mod(T x, T y);
 
 #define DispVal(X) std::cout << #X << " = " << X<< std::endl
 
-
+/**Modulus after division.
+ *
+ * @pre:
+ *    - x: input value
+ *    - y: input value
+ *    - result: output of modulus after division: mod(x,y)
+ *
+ * @post:
+ *    - Modulus computed!
+ */
 template <class T >
 T mod(T x, T y){
   
@@ -29,6 +38,41 @@ T mod(T x, T y){
 
 }
 
+
+/**  Function is supposed to filter the phase offset using state space model,
+ * it is a Kalman filter in a particular case with known phi_hat
+ *
+ *          B(n)A+B(n)+A
+ * B(n+1)=--------------- 
+ *            B(n)+A
+ *   
+ *             A                     B(n) 
+ * phi(n+1)=--------phi(n)  +    ---------*phi(n+1)
+ *           B(n)+A                 B(n)+A  
+ *           Q0
+ *  B0=-------------- +1
+ *       sigma_phi^2
+ *
+ *  sigma_phi_sqr=pi/4*1/number of bits transmitted
+ *  
+ *
+ * @pre:
+ *    - data: pointer to array of downsampled data without guard bits; the firs *            t bit is the first bit from the training sequence
+ *    - data_size: size of data[]
+ *    - phi_hat: estimated angle from sync_catch
+ *    - train:  pointer to array of modulated training sequence
+ *    - train_size: size of train[]
+ *    - Q0:  depend on the length of the training sequence: pi^2/8;
+ *    - sigma_phi_sqr - is defined as a constant term (here,as we have already 
+ *               removed the free offset: should be low, for example: 10^-3
+ *    - sigma_m_sqr - may vary in time.
+ *    - out: the array of filtered elements, size of total_samps 
+ *   
+ *
+ * @post:
+ *    - out is now filled
+ *
+ */
 
 int filter_phase(complex<double> * data, int data_size, double phi_hat, complex<double> * train, int train_size, double Q0, double sigma_phi_sqr, double sigma_m_sqr, complex<double> * out ){
   
@@ -46,25 +90,22 @@ int filter_phase(complex<double> * data, int data_size, double phi_hat, complex<
    
 
   phi=phi_hat;
-
-  
   for(int i1=0; i1<train_size; i1++){
     e=b+a;
     phi_mes_estimated=arg(data[i1]*conj(train[i1]));
-    mod1=phi_mes_estimated-phi;
+    mod1=phi_mes_estimated-phi+PI;
     mod2 = 2*PI;
     res_mod=mod(mod1,mod2);
    
-    phi=(a/e)*(res_mod)+phi;
+    phi=(a/e)*(res_mod-PI)+phi;
     b=1+b/e;
-   
     
   }
+ 
   //Attention, for good result this angle should be defined between -pi and pi
 
   complex<double> arg1;
 
- 
 
   for(int i2=train_size; i2<data_size ; i2++ ){
     e=b+a;

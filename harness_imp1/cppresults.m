@@ -36,7 +36,6 @@ length(xComplex_matched);
 subplot(3,2,3)
 plot(real(xComplex_matched));
 
-
 fid1=fopen('x_downsamp.dat','r');
 x_downsamp=fread(fid1, 2*3225,'double');
 fclose(fid1);

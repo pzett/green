@@ -67,11 +67,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     ("help", "help message")
     ("args", po::value<std::string>(&args)->default_value(""), "simple uhd device address args")
     ("secs", po::value<double>(&seconds_in_future)->default_value(3), "number of seconds in the future to transmit")
-    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(1000), "total number of samples to transmit")
+    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(27840), "total number of samples to transmit")
     ("txrate", po::value<double>(&tx_rate)->default_value(100e6/16), "rate of outgoing samples")
-    ("freq", po::value<double>(&freq)->default_value(0), "rf center frequency in Hz")
-    ("LOoffset", po::value<double>(&LOoffset)->default_value(0), "Offset between main LO and center frequency")
-    ("forever",po::value<bool>(&forever)->default_value(false), "run indefinetly")
+    ("freq", po::value<double>(&freq)->default_value(5.5e9), "rf center frequency in Hz")
+    ("LOoffset", po::value<double>(&LOoffset)->default_value(10e6), "Offset between main LO and center frequency")
+    ("forever",po::value<bool>(&forever)->default_value(true), "run indefinetly")
     ("10MHz",po::value<bool>(&use_external_10MHz)->default_value(false), 
      "external 10MHz on 'REF CLOCK' connector (true=1=yes)")
     ("PPS",po::value<bool>(&trigger_with_pps)->default_value(false), 
@@ -164,8 +164,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
   };
  /////////////////////////////////////////////////////////////////////////
 
-  // Save data to file
-     std::ofstream ofs( "sentx_downsamp.dat" , std::ifstream::out );
+  // Save data to file to check what was sent
+     std::ofstream ofs( "sent.dat" , std::ifstream::out );
      ofs.write((char * ) buffer, nAll*sizeof(short));
      ofs.close();
 

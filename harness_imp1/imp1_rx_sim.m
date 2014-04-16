@@ -43,33 +43,37 @@
   k=0:1:length(rx_data)-1;
   v_corr=exp(-1i*2*pi*v_offs*k);
   rx_bb=rx_data.*conj(v_corr');
-    
+  rx_bb=rx_data;  
   figure(1)
     subplot(3,2,1)
     plot(real(rx_bb))
   
-% Matched filter. :mmq
+  % Matched filter. :mmq
   mf_pulse_shape = fliplr(pulse_shape);
   rx_bb=filter(mf_pulse_shape,1,rx_bb);
    subplot(3,2,3)
     plot(real(rx_bb))
+     length(rx_bb)
+     
   
 % Sampling time synchronization
   [t_samp,phi_hat]=sync_catch(rx_bb, train, Q);
     
+ 
+  
 %Downsample
   rx_mod=rx_bb(t_samp:Q:t_samp+Q*(nr_data_bits/nr_bits_x_symbol+nr_training_bits)-1);
   %rx_mode=rx_bb(t_samp:1:t_samp+Q*(nr_data_bits/nr_bits_x_symbol+nr_training_bits)-1);
 %Phase correction
     subplot(3,2,2)
     plot(rx_mod,'.')
+    length(rx_mod)
    
   rx_mod2=filter_phase(rx_mod, phi_hat, train, 0.01, 0.01, 0.01);
     subplot(3,2,4)
     plot(rx_mod2,'.')
     
 %Detection
-    rx_mod2=conj(rx_mod2);  %ATENTION TO CONJ%
   rx_data_detect=detect(rx_mod2);
   result_from_matlab=rx_data_detect;
   
