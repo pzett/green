@@ -129,7 +129,7 @@ copy(data_qpsk, &data_qpsk[nData],&all[nPref+nGuard+nTrain+nTrain+nData]);
  for (int i =0; i<nAll;i=i+2){
    for (int ii=0;ii<Q; ii++){
      *q=(short) (amp*(*p));
-     *(q+1)=(short) (amp*(*(p+1)));
+     *(q+1)=(short) ((1)*amp*(*(p+1)));
      q=q+2;
    }
    p=p+2;
