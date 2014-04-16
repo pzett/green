@@ -77,7 +77,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     ("PPS",po::value<bool>(&trigger_with_pps)->default_value(false), 
      "trigger reception with 'PPS IN' connector (true=1=yes)")
     ("filename",po::value<std::string>(&filename)->default_value("data_to_usrp.dat"), "input filename")
-    ("gain",po::value<float>(&gain)->default_value(0), "gain of transmitter")
+    ("gain",po::value<float>(&gain)->default_value(30), "gain of transmitter")
     ("8bits",po::value<bool>(&use_8bits)->default_value(false), "Use eight bits/sample to increase bandwidth")
   
     ////////////////////////////////
@@ -98,11 +98,13 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
   //////// Create buffer storage to pass to USRP -> complex short always
  
-  std::complex<short> *buffer;
-  buffer = new std::complex<short>[total_num_samps];
+ 
   int nAll=13920*4;
   short *all;
   all = new short[nAll];
+
+   std::complex<short> *buffer;
+  buffer = new std::complex<short>[nAll/2];
   ////////////////// Create data to be transmitted ///////////////////////
    
   if(readFile==true){
@@ -164,10 +166,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
   };
  /////////////////////////////////////////////////////////////////////////
 
-  // Save data to file to check what was sent
-     std::ofstream ofs( "sent.dat" , std::ifstream::out );
-     ofs.write((char * ) buffer, nAll*sizeof(short));
-     ofs.close();
+ 
 
 
     //create a USRP device and streamer
@@ -290,12 +289,13 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
       uhd::io_type_t::COMPLEX_INT16,
       uhd::device::SEND_MODE_FULL_BUFF);
       */
-      tx_stream->send(buffer,total_num_samps,md,60);
+      tx_stream->send(buffer,nAll,md,60);
 
       
       md.start_of_burst = false;
 
-      while (1) {
+
+      while (0) {
 
 	/*
 	num_tx_samps = dev->send(
@@ -344,6 +344,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     };
  
     //finished
+
+     // Save data to file to check what was sent
+     std::ofstream ofs( "sent.dat" , std::ifstream::out );
+     ofs.write((char * ) buffer, nAll*sizeof(short));
+     ofs.close();
 
 
     std::cout << std::endl << "Done! Transmission completed" << std::endl << std::endl;
