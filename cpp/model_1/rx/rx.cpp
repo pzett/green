@@ -78,7 +78,7 @@ float powerTotArray( short data[], int no_elements){
     };
 
   };
-  return power;
+  return (power);
 };
 
 // Processing thread nStorage: size of the array
@@ -87,7 +87,8 @@ void processing(int nStorage){
   short *data_bin;
   int nDataB=6250;
   data_bin=new short[nDataB];
-  while(1){
+  bool forever=true;
+  while(forever){
     // Ask for data
     sem_wait(&detectionReady);
     data=detectionQ.front();
@@ -97,11 +98,11 @@ void processing(int nStorage){
     
     //Process online data:
 
-    receiverSignalProcessing(data, 2*nStorage, data_bin, nDataB);
+    receiverSignalProcessing(data, nStorage, data_bin, nDataB);
 
     // Save data to file
     std::ofstream ofs( "received.dat" , std::ifstream::out );
-    ofs.write((char * ) data, 2*nStorage*sizeof(short));
+    ofs.write((char * ) data, nStorage*sizeof(short));
     ofs.close();
     //std::cout << "Finish Writing to file\n";
 
@@ -121,7 +122,7 @@ void processing(int nStorage){
     mtxDetection.lock();
     detectionQ.pop();
     mtxDetection.unlock();
-    exit(1);
+    forever=false;
   }
 }
 
@@ -136,9 +137,6 @@ void usrpGetData(uhd::rx_streamer::sptr rx_stream, uhd::usrp::multi_usrp::sptr d
   size_t n_rx_last;
   uhd::rx_metadata_t md;
   //int time=buffer_size/(25)-100; // microsecondes
-
-  
-
 
   while (1){
     n_rx_last=0;
@@ -206,6 +204,8 @@ void detection(uint nDetect, int nStorage){
 	p=usrpQ.front();
       }
       else{
+	// End of transmission
+	count_trans=0;
 	isDetected=false;
 	nCurrent=0;
 	mtxDetection.lock();
@@ -225,9 +225,9 @@ void detection(uint nDetect, int nStorage){
 
       count_trans++;//Avoid transient power amplification
 
-      //Power threshold=200
+      //Power threshold=200 150USRP2 count trns 10000 
 
-      if (power>000&& count_trans>10000){
+      if (power>12000&& count_trans>10000){
 	// If detection, keep the element
 	std::cout<<"Detected Transmission\n";
 	//exit(1);
