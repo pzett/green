@@ -1,1 +1,0 @@
-//Functions of the Receiver 
