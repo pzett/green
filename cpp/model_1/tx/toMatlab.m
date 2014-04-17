@@ -26,7 +26,7 @@ end
 figure(1)
 plot(real(xComplex))
 
-
+a=rms(xComplex)
 
 figure(2)
 plot(abs(xcorr(tComplex)))
@@ -36,7 +36,7 @@ Q=4;
 pulse=ones(1,4);
 train_seq=upfirdn(tComplex, pulse, Q, 1);      %upsample original TS
     
-    c = xcorr(xComplex,train_seq);
+    c = xcorr((xComplex),train_seq);
     c_dash = c(length(xComplex):floor(3/2*length(xComplex)+1));
     plot(abs(c_dash))
     [~,t_samp] = max(abs(c_dash));

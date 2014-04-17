@@ -71,7 +71,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     ("txrate", po::value<double>(&tx_rate)->default_value(100e6/16), "rate of outgoing samples")
     ("freq", po::value<double>(&freq)->default_value(5.5e9), "rf center frequency in Hz")
     ("LOoffset", po::value<double>(&LOoffset)->default_value(10e6), "Offset between main LO and center frequency")
-    ("forever",po::value<bool>(&forever)->default_value(true), "run indefinetly")
+    ("forever",po::value<bool>(&forever)->default_value(false), "run indefinetly")
     ("10MHz",po::value<bool>(&use_external_10MHz)->default_value(false), 
      "external 10MHz on 'REF CLOCK' connector (true=1=yes)")
     ("PPS",po::value<bool>(&trigger_with_pps)->default_value(false), 
@@ -132,6 +132,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
       }
     */
     buffer= (std::complex<short> * ) all;
+    total_num_samps=nAll/2;
     /*
       for (int i=(0)*4;i<(10)*4;i++){
       cout << "buffer["<<i<<"] = " << buffer[i]<<"\n";
@@ -267,12 +268,20 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
     ///////////////Transmission of data///////////////////////////////////
 
+    if(!readFile){
+      //Conjugate!!!
+      for(int i=0; i<(int)(total_num_samps);i++){
+    	buffer[i]=conj(buffer[i]);
+      }
+      std::cout<<"Conj!\n";
+    }
     /*----> send data in loop
       ----> send data once and let receiver handle it */
     
     uhd::tx_metadata_t md;
 
     if (forever) {
+      
 
       std::cout << "Stop the transmitter by pressing ctrl-c \n";
 
@@ -289,13 +298,13 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
       uhd::io_type_t::COMPLEX_INT16,
       uhd::device::SEND_MODE_FULL_BUFF);
       */
-      tx_stream->send(buffer,nAll,md,60);
+      tx_stream->send(buffer,total_num_samps,md,60);
 
       
       md.start_of_burst = false;
 
 
-      while (0) {
+      while (1) {
 
 	/*
 	num_tx_samps = dev->send(
@@ -318,37 +327,65 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     else
     {
 
-      //Transmit data once and let receiver handle it
-    
-    dev->set_time_now(uhd::time_spec_t(0.0));
-    md.start_of_burst = true;
-    md.end_of_burst = true;
-    md.has_time_spec = true;
-    md.time_spec = uhd::time_spec_t(seconds_in_future);
+       std::cout << "Transmiting only once \n";
 
-    //send the entire buffer, let the driver handle fragmentation
+      md.start_of_burst = true;
+      md.end_of_burst = false;
+      md.has_time_spec = false;
+      
+     
+      //send the entire buffer, let the driver handle fragmentation
 
-    /*
+      /*
       num_tx_samps = dev->send(
-	buffer, total_num_samps, md,
-        //&buff.front(), buff.size(), md,
-        uhd::io_type_t::COMPLEX_FLOAT32,
-        uhd::device::SEND_MODE_FULL_BUFF);
-    */
+      buffer, total_num_samps, md,
+      uhd::io_type_t::COMPLEX_INT16,
+      uhd::device::SEND_MODE_FULL_BUFF);
+      */
+
+      for(int i=total_num_samps-100; i<(int)(total_num_samps);i++){
+	  std::cout<<buffer[i]<<"\n";
+      }
+      tx_stream->send(buffer,total_num_samps,md,60);
+
+      
+
+       // Save data to file to check what was sent
+     std::ofstream ofs( "sent.dat" , std::ifstream::out );
+     ofs.write((char * ) buffer, 2*total_num_samps*sizeof(short));
+     ofs.close();
+
+      
+      md.start_of_burst = false;
+
+     //  //Transmit data once and let receiver handle it
+    
+    // dev->set_time_now(uhd::time_spec_t(0.0));
+    // md.start_of_burst = true;
+    // md.end_of_burst = true;
+    // md.has_time_spec = true;
+    // md.time_spec = uhd::time_spec_t(seconds_in_future);
+
+    // //send the entire buffer, let the driver handle fragmentation
+
+    // /*
+    //   num_tx_samps = dev->send(
+    // 	buffer, total_num_samps, md,
+    //     //&buff.front(), buff.size(), md,
+    //     uhd::io_type_t::COMPLEX_FLOAT32,
+    //     uhd::device::SEND_MODE_FULL_BUFF);
+    // */
     
 
-    tx_stream->send(buffer,total_num_samps,md,60);
+    // tx_stream->send(buffer,total_num_samps,md,60);
     
-    std::cout << "\nData only sent once \n";
+    // std::cout << "\nData only sent once \n";
 
     };
  
     //finished
 
-     // Save data to file to check what was sent
-     std::ofstream ofs( "sent.dat" , std::ifstream::out );
-     ofs.write((char * ) buffer, nAll*sizeof(short));
-     ofs.close();
+    
 
 
     std::cout << std::endl << "Done! Transmission completed" << std::endl << std::endl;
