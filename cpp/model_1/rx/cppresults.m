@@ -3,15 +3,15 @@ clear all;
 
 %% Data Received
 
-
+N_samps=55680;
 fid1=fopen('received.dat','r');
-x_rec=fread(fid1, 55680,'short');
+x_rec=fread(fid1, N_samps,'short');
 fclose(fid1);
 
 
-xComplex_rec= zeros(1,55680/2);
+xComplex_rec= zeros(1,N_samps/2);
 count = 1;
-for i=1:2:55680
+for i=1:2:N_samps
     xComplex_rec(count) = complex(x_rec(i),x_rec(i+1));
     count = count+1;
 end

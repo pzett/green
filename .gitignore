@@ -1,8 +1,9 @@
-
+rx
+tx
 !*.*
 !Makefile
 *.out
 *.o
 *~
 [#]*[#]
-sent.bin
+*.bin
