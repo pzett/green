@@ -4,7 +4,7 @@ clear all;
 %% Data Received
 
 N_samps=55680;
-fid1=fopen('received.dat','r');
+fid1=fopen('received0.dat','r');
 x_rec=fread(fid1, N_samps,'short');
 fclose(fid1);
 
@@ -126,7 +126,7 @@ fclose(fid);
 
 
 % Load data from file (note the type)
-fid=fopen('data_from_harness.dat','r');
+fid=fopen('decoded0.dat','r');
 temp=fread(fid, 6250 ,'short');
 fclose(fid);
 result_from_harness=temp;
