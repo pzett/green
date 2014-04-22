@@ -30,12 +30,27 @@
 #include <stdlib.h>
 #include <fstream>
 
+#include <pthread.h>
+#include <sys/resource.h>
+#include <sys/time.h>
+
 #include "tx_funct_2.hpp"
 
+#define DispVal(X) std::cout << #X << " = " << X<< std::endl
 
 namespace po = boost::program_options;
 
 int UHD_SAFE_MAIN(int argc, char *argv[]){
+
+   // Set priority of the main thread
+  int which = PRIO_PROCESS;
+  id_t pid;
+  int priority = -20;
+  int ret;
+
+  pid = getpid();
+  ret = setpriority(which, pid, priority);
+  if(ret!=0){  std::cout << "Main priority went wrong: " << ret << std::endl ;}
 
   //Seting priority in the processor to run faster -> run with sudo
   if (uhd::set_thread_priority_safe(1,true)) {
@@ -64,7 +79,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     ("help", "help message")
     ("args", po::value<std::string>(&args)->default_value(""), "simple uhd device address args")
     ("secs", po::value<double>(&seconds_in_future)->default_value(3), "number of seconds in the future to transmit")
-    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(27840), "total number of samples to transmit")
+    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(37960), "total number of samples to transmit")
     ("txrate", po::value<double>(&tx_rate)->default_value(100e6/4), "rate of outgoing samples")
     ("freq", po::value<double>(&freq)->default_value(5.5e9), "rf center frequency in Hz")
     ("LOoffset", po::value<double>(&LOoffset)->default_value(10e6), "Offset between main LO and center frequency")
@@ -76,8 +91,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     ("filename",po::value<std::string>(&filename)->default_value("data_to_usrp.dat"), "input filename")
     ("gain",po::value<float>(&gain)->default_value(30), "gain of transmitter")
     ("8bits",po::value<bool>(&use_8bits)->default_value(false), "Use eight bits/sample to increase bandwidth")
-  
-    ////////////////////////////////
     ("readFile",po::value<bool>(&readFile)->default_value(false), "defines if program reads data from file or generate data itself")
     ;
 
@@ -93,10 +106,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     return ~0;
   }
 
-  //////// Create buffer storage to pass to USRP -> complex short always
+  //////// Create buffer storage to pass to USRP -> complex short always ///////////////////
  
  
-  int nAll=13920*4;
+  int nAll=total_num_samps*2;
   short *all;
   all = new short[nAll];
 
@@ -122,9 +135,20 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
   }else{
     // Call the function creating the data
     imp_1(all);
- 
+
+    // for(int i=0; i<(int)(2*total_num_samps);i++){
+    //   std::cout << "all["<<i<<"] = " << all[i]<<"\n";
+    // }
+   
+
     buffer= (std::complex<short> * ) all;
-    total_num_samps=nAll/2;
+   
+
+    
+
+    // for(int i=0; i<(int)(total_num_samps);i++){
+    //   DispVal(buffer[i]);
+    // }
 
     // Write to file
     // FILE * xFile;
@@ -290,9 +314,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
       
 
       //   // Save data to file to check what was sent
-      // std::ofstream ofs( "sent.dat" , std::ifstream::out );
-      // ofs.write((char * ) buffer, 2*total_num_samps*sizeof(short));
-      // ofs.close();
+      std::ofstream ofs( "sent.dat" , std::ifstream::out );
+      ofs.write((char * ) buffer, 2*total_num_samps*sizeof(short));
+      ofs.close();
 
     
       std::cout << "\nData only sent once \n";
