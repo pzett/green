@@ -311,6 +311,7 @@ double freqOffset=0.0;
 
   int nDataC=nDataB/2;
   int nDataTrain=nDataC+nTrainSeq;
+  DispVal(nDataTrain);
   //DispVal(nDataTrain);
   // downsampling
   std::complex<double> x_downsampled[nDataTrain];

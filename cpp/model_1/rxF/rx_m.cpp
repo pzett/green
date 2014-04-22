@@ -88,7 +88,7 @@ float powerTotArray( short data[], int no_elements){
 // Processing thread nStorage: size of the array
 void processing(short *data,int nStorage, int name){
   short *data_bin;
-  int nDataB=9380;
+  int nDataB=18760;
   data_bin=new short[nDataB];
  
     std::this_thread::yield();
@@ -299,7 +299,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
   po::options_description desc("Allowed options");
   desc.add_options()
     ("help", "help message")
-    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(40000), "total number of samples to receive")
+    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(37960), "total number of samples to receive")
     ("rxrate", po::value<double>(&rx_rate)->default_value(100e6/4), "rate of incoming samples")
     ("freq", po::value<double>(&freq)->default_value(5.5e9), "rf center frequency in Hz")
     ("LOoffset", po::value<double>(&LOoffset)->default_value(10e6), "Offset between main LO and center frequency")
