@@ -249,16 +249,12 @@ double freqOffset=0.0;
 
 
 
-
   /////////////////////////// matched filtering//////////////////////
   double x_matchedFilt [buffersize];
 
   matchedFilter(x, buffersize, x_matchedFilt, buffersize);
 
-   
   
-
- 
   std::cout << " Matched Filtered! " << std::endl;
 
   // synchronization
@@ -268,8 +264,15 @@ double freqOffset=0.0;
   
   // Loading the training sequence
   std::ifstream ifs3( "train_norm.dat" , std::ifstream::in );
-  ifs3.read((char * )trainSeq,2*nTrainSeq*sizeof(double));
-  ifs3.close();
+  if(ifs3.is_open()){
+    ifs3.read((char * )trainSeq,2*nTrainSeq*sizeof(double));
+    ifs3.close();
+  }else{
+    std::cerr<<"Error downloading train!\n";
+    exit(1);
+  }
+
+  
 
   // for(int i=0; i<nTrainSeq; i++){
   //   DispVal(trainSeq[i]);
@@ -306,7 +309,7 @@ double freqOffset=0.0;
 
   std::cout << " Synchronized! " << std::endl;
 
-  int nDataC=6250/2;
+  int nDataC=nDataB/2;
   int nDataTrain=nDataC+nTrainSeq;
   //DispVal(nDataTrain);
   // downsampling
