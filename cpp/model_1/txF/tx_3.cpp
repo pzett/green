@@ -282,7 +282,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
       
      
     //send the entire buffer, let the driver handle fragmentation
-    tx_stream->send(buffer,total_num_samps,md,60);
+    tx_stream->send(buffer,2*total_num_samps,md,60);
 
       
     md.start_of_burst = false;
@@ -290,7 +290,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
     while (1) {
 
-      tx_stream->send(buffer,total_num_samps,md,3);
+      tx_stream->send(buffer,2*total_num_samps,md,3);
 
       md.start_of_burst = false;
       md.end_of_burst = false;
@@ -309,7 +309,8 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
       md.end_of_burst = false;
       md.has_time_spec = false;
  
-      tx_stream->send(buffer,total_num_samps,md,60);
+      DispVal(total_num_samps);
+      tx_stream->send(buffer,2*total_num_samps,md,60);
       md.start_of_burst = false;
       
 
