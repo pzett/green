@@ -71,7 +71,7 @@ void interp(vec pilotFFT, double pilot_pos[], int nPilot, int nElem){
     std::cout << step << std::endl;
     for (int ii=0;ii<deltaI; ii++ ){
       out.set(mod((pilotP(i)+ii),(double) nElem), pilotFFTp(i)+ii*step);
-      std::cout << ii <<" position " <<mod((pilotP(i)+ii),(double)nElem) << std::endl;
+      std::cout << out << std::endl;
     }
   }
   std::cout << out<<std::endl;
@@ -90,15 +90,14 @@ out.set(i, pilotFFTp(lPilot+2));
     std::cout << step << std::endl;
     for (int ii=0;ii<deltaI; ii++ ){
       out.set(pilotP(i)+ii, pilotFFTp(i)+ii*step);
-      std::cout << ii <<" position " <<mod((pilotP(i)+ii),(double)nElem) << std::endl;
- std::cout << out<<std::endl;
+      std::cout << out<<std::endl;
     }  
   }
 }
 
 int main (){
-  int nElem = 20;
-  double pilot_pos[]={ 1 , 4 , 12, 15,17};
+  int nElem = 18;
+  double pilot_pos[]={ 4 , 11 , 13, 15,17};
   int nPilot=5;
   double pilot[]={ 1,2,3,4,5};
   vec pilotFFT(pilot, nPilot);
