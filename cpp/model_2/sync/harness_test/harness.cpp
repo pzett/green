@@ -28,21 +28,35 @@
 #include <boost/format.hpp>
 #include <iostream>
 #include <complex>
-#include <uhd/types/clock_config.hpp>
-#include <complex>
+#include <vector>
+#include <itpp/itbase.h>
+#include <itpp/itcomm.h> 
+#include "arrayToCvec.cpp"
 
 
 namespace po = boost::program_options;
 
 using namespace std;
+using namespace itpp;
+ 
+// The sync_catch_channel is defined in another file (normally in *.hpp file):
+
+extern cvec synchCatchChannel(cvec dataC, cvec trainCUp, int Post, int Pre , double *phiHat, double *AHat, int *delay, double *sigmaSqrNoise );
 
 #define DispVal(X) std::cout << #X << " = " << X<< std::endl
 
-extern double dummy_float;
- 
-// The filter_phase is defined in another file (normally in *.hpp file):
-
-extern int filter_phase(complex<double> * data, int data_size, double phi_hat, complex<double> * train, int train_size, double Q0, double sigma_phi_sqr, double sigma_m_sqr, complex<double> * out );
+template<class T>
+void hold(T data[], T out[], int Q, int nElem){
+  int c=0;
+  for (int i=0; i<nElem;i++){
+    for (int d=0;d<Q;d++){
+    
+      out[c+d]=data[i];
+      
+    }
+    c=c+Q;
+  }
+}
 
 
 
@@ -50,7 +64,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     
 
 
-    std::cout << "This program is goint to test C++ filter_phase using matlab as a reference. \n";
+    std::cout << "This program is goint to test C++ filter_phasesync_catch_phase using matlab as a reference. \n";
     
     /***************************************************************************************/
  
@@ -59,7 +73,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     int data_size;
     //std::string dummy_string;
     int train_size;
-    double phi_hat;
+    int delay, Post, Pre;
+    double phiHat, AHat, sigmaSqrNoise;
+    itpp::cvec thetaEst;
 
 
     //Program options start
@@ -70,8 +86,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
          /* command-line perfix, type, help string  */
         ("data_size", po::value<int>(&data_size)->default_value(10), "number of elements in data")
       ("train_size", po::value<int>(&train_size)->default_value(10), "number of elements in train")
-      ("phi_hat", po::value<double>(&phi_hat)->default_value(0), "phi_hat");
-
+      ("length_pre", po::value<int>(&Pre)->default_value(0), "length_pre")
+      ("length_post", po::value<int>(&Post)->default_value(0), "length_post");
+     
+    
+    
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
@@ -113,30 +132,30 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     //   DispVal(train_r[ii]);
     //   DispVal(ii);
     // };
+
+    //Upsample train seq-> Done outside function:
+   int Q=4;
+   std::complex<double> trainSeqUp[Q*train_size];
+   hold(train_r, trainSeqUp, Q, train_size);
+    
+    cvec dataC=arrayToCvec(data_r, data_size); 
+    cvec trainC=arrayToCvec(trainSeqUp, Q*train_size); 
+    
     
     // Call the function
     
-    complex<double> * res;
-    
-    int res_size=data_size-train_size;
+    thetaEst = synchCatchChannel(dataC, trainC, Pre, Post , &phiHat,  &AHat, &delay, &sigmaSqrNoise );
 
-    res= new complex<double>[res_size];
-    
-
-    res_size= filter_phase( data_r, data_size,  phi_hat, train_r, train_size, 0.01,0.01, 0.01, res);
-
-    std::cout << "number_of_elements=" << res_size << std::endl;
+    std::cout<<"Channel="<<thetaEst<<"\n";
+    std::cout <<" tsamp="<<delay<<"\n";
+    std::cout<<" phase_hat="<<phiHat<<"\n";
+    std::cout<<" A_hat="<<AHat<<"\n";
+    std::cout<<" sigma_square_noise="<<sigmaSqrNoise<<"\n";
 
     // for(int ii=0;ii<res_size;ii++){
     //    DispVal(res[ii]);
     //    DispVal(ii);
     //  };
-
-    DispVal(res_size);
-     // Save data to file
-     std::ofstream ofs1( "data_from_harness.dat" , std::ifstream::out );
-     ofs1.write((char * )res, 2*res_size*sizeof(double));
-     ofs1.close();
 
     
     return 0;
