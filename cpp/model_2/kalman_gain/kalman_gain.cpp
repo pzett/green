@@ -27,12 +27,22 @@ void print(std::queue<itpp::vec> s)
     return;
 }
 
-
-/* scalar kalman filter to filter the gain of the pilots
-
-Done by two functions -> one does iterations and one calls it and stores data
-
-*/
+/** Computes one iteration of a scalar kalman filter:
+ *
+ * @pre:
+ *    - xhat_filt_p: Previous filtered data -> x(n|n)
+ *    - y: data measured -> y(n+1)
+ *    - F, G and H: state model definiton
+ *    - R1 and R2: User parameters of the Kalman -> covariance of the noise
+ *    - Q: error covariance matrix -> Q(n)
+ *    - xhat_pred: data predicted -> x(n+1|n)
+ *    - yhat: predicted measured data -> y(n+1|n)
+ *    - xhat_filt: data filtered -> x(n+1|n+1)
+ *    - Q_n: computed error covariance -> Q(n+1)
+ *
+ * @post:
+ *    - Iteration done!
+ */
 
 void kalmanGainIteration (double xhat_filt_p, double y, double Q, double R1, double R2, double F,double H, double G, double *xhat_pred, double *yhat, double *xhat_filt, double *Q_n ){
   
@@ -51,6 +61,20 @@ void kalmanGainIteration (double xhat_filt_p, double y, double Q, double R1, dou
   return;
 }
 
+
+/** Return a queue with the Pilot Gain filtered based on a scalar Kalman filter
+ *
+ * @pre:
+ *    - Pilot: queue of vec's with the received pilots
+ *    - nPilot: number of pilots per OFDM symbol
+ *    - F, G and H: state model definiton
+ *    - R1 and R2: User parameters of the Kalman -> covariance of the noise
+ *    - x0: vec with the initialization of the kalman
+ *    - Q0: initialization of the error covariance matrix 
+ *
+ * @post:
+ *    - Pilots are now filter!
+ */
 std::queue<itpp::vec> kalmanGain (std::queue<itpp::vec> Pilot, int nPilot, double F, double G, double H, double R1, double R2, vec x0, double Q0){
   
   double xhat_pred,  yhat,  xhat_filt, Q_n;
@@ -65,7 +89,7 @@ std::queue<itpp::vec> kalmanGain (std::queue<itpp::vec> Pilot, int nPilot, doubl
   Pilot.pop();
    for(int i=0; i<nPilot;i++){
       //one iteration of the kalman
-     kalmanGainIteration(x0(0), y(i), Q0,R1,R2,F,H,G, &xhat_pred, &yhat, &xhat_filt, &Q_n );
+     kalmanGainIteration(x0(i), y(i), Q0,R1,R2,F,H,G, &xhat_pred, &yhat, &xhat_filt, &Q_n );
       //update xhatfilt and Q
       xhat_filt_p(i)=xhat_filt;
       Q(i)=Q_n;
@@ -90,9 +114,9 @@ std::queue<itpp::vec> kalmanGain (std::queue<itpp::vec> Pilot, int nPilot, doubl
     
   }
 
-  DispVal(Pilot.size());
-  DispVal(filtPilot.size());
-  if(PilotSizeIni!=filtPilot.size()){
+  //DispVal(Pilot.size());
+  //DispVal(filtPilot.size());
+  if(PilotSizeIni!=(int)filtPilot.size()){
     std::cout<<"Error in filtering!\n";
     exit(1);
   }
@@ -101,6 +125,7 @@ std::queue<itpp::vec> kalmanGain (std::queue<itpp::vec> Pilot, int nPilot, doubl
 
 }
 
+/*
 int main (){
   
    double noisevar = 0.01;
@@ -127,3 +152,4 @@ int main (){
   
   return 0;
 }
+*/
