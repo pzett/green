@@ -23,16 +23,16 @@ cvec arrayToCvec(double *array, int nElem){
 
 }
 
-int mod(double a, double b){
+double mod(double a, double b){
   if (a<0){
   double rem=std::ceil(a/b);
-  rem=a-rem;
+  rem=a-rem*b;
   //std::cout<<"rem "<<rem<<std::endl;
   rem=b+rem;
   return rem;
   }else{
   double rem=std::floor(a/b);
-  rem=a-rem;
+  rem=a-rem*b;
  return rem;
   }
 }
