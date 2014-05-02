@@ -1,0 +1,6 @@
+clc;clear;close all;
+
+% loading data
+load('parameters')
+
+transmiter;
