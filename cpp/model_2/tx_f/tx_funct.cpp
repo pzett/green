@@ -3,9 +3,11 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
+#include <itpp/base/vec.h>
 #include <itpp/itbase.h>
 #include <itpp/itsignal.h>
 #include <complex>
+#include <itpp/comm/modulator.h>
 
 
  /*
@@ -14,9 +16,9 @@
 using namespace std;
 using namespace itpp;
 
-extern void tx_funct(  int N,int nUsedC,int nPilotC,int pre,int post,int nDataBin, int nPilotData,int nBits,double data_pattern[],double data_bin[],double data_pil[],double pilot_pattern[],short output[]);
+extern void tx_funct(short output[]);
 
-cvec dataAlloc (std::complex<double> data_qam[], std::complex<double> data_pilot[], double pilot_pattern[], double data_pattern[], int N){
+cvec dataAlloc (cvec data_qam, std::complex<double> data_pilot[], double pilot_pattern[], double data_pattern[], int N){
 
   int n=0;
   int m=0;
@@ -31,7 +33,7 @@ cvec dataAlloc (std::complex<double> data_qam[], std::complex<double> data_pilot
      
    }
    else if (data_pattern[n]-1==i){
-     data_alloc.set(i,data_qam[n]);   
+     data_alloc.set(i,data_qam.get(n));   
       n++;
    }
    else{
@@ -44,11 +46,6 @@ cvec dataAlloc (std::complex<double> data_qam[], std::complex<double> data_pilot
   return(data_alloc);
 
 }
-
-
-
-
-
 
 
 
@@ -66,7 +63,7 @@ cvec prePost (cvec data_time, int pre, int post){
 
 
 
-cvec serial2serial (std::complex<double> data_qam[],std::complex<double> data_pil[],double data_pattern[], double pilot_pattern[],int N, int nUsedC, int nPilotC, int pre, int post, bool firstDone){
+cvec serial2serial (cvec data_qam,std::complex<double> data_pil[],double data_pattern[], double pilot_pattern[],int N, int nUsedC, int nPilotC, int pre, int post, bool firstDone){
 
     cvec data_alloc=dataAlloc(data_qam,data_pil,pilot_pattern,data_pattern,N);
     
@@ -77,107 +74,84 @@ cvec serial2serial (std::complex<double> data_qam[],std::complex<double> data_pi
       return(out);
  }
 
-/** Transfer the information bits to a QPSK constellation
- * @pre:
- *     - data_bin: an array of 0 and 1
- *     - data_qpsk: complex array of double. output. Length nElem 
- *     - nElem: length of data_bin
- *
- * @post:
- *     - data_qpsk is filled with -1/sqrt(2) and 1/sqrt(2) according to
- *
- * complex part (Q channel)
- *         ^
- *         |
- *  10 x   |   x 00   (odd bit, even bit)
- *         |
- *  -------+------->  real part (I channel)
- *         |
- *  11 x   |   x 01
- *         |
- */
-void qpsk(double data_bin[],std::complex<double> data_qpsk[], int nElem){
-  for (int i=0;i<nElem;i=i+2){
-    if(itpp::round(data_bin[i])==0){ 
-      // 00 mapped to 1+j
-      if (itpp::round(data_bin[i+1])==0){data_qpsk[i/2].real()=1/1.4142 ; data_qpsk[i/2].imag()=1/1.4142;}
-      // 01 mapped to 1-j
-      else if(itpp::round(data_bin[i+1])==1){data_qpsk[i/2].real()=1/1.4142 ; data_qpsk[i/2].imag()=-1/1.4142;}
-      else {cerr << "The input data_bin is not composed of 01"<<"\n";}
-    } 
-    else if(itpp::round(data_bin[i])==1){
-      // 10 mapped to -1+j
-      if (itpp::round(data_bin[i+1])==0){data_qpsk[i/2].real()=-1/1.4142 ; data_qpsk[i/2].imag()=1/1.4142;}
-      // 11 mapped to -1-j
-      else if(itpp::round(data_bin[i+1])==1){data_qpsk[i/2].real()=-1/1.4142 ; data_qpsk[i/2].imag()=-1/1.4142;}
-      else {cerr << "The input data_bin is not composed of 01"<<"\n";;}
-    }
-    else {cerr << "The input data_bin is not composed of 01"<<"\n";;}
-  }
 
-}
+void tx_funct(short output[]){
 
-void mqam(double data_bin[],std::complex<double> data_mqam[], int nElem, int nBits){
-  int counter = 0;
-  //int nBits = nBitsPerAxis-1;
-  for(int i=0;i<nElem;i=i+2*nBits){
-    double summation1 = 0.0;
-    double summation2 = 0.0;
-    for(int k=1;k<=nBits;k++){
-      double sumBits1 = 0.0;
-      double sumBits2 = 0.0;
-      for(int j=0;j<k;j++){sumBits1 = sumBits1 + data_bin[i+j];sumBits2 = sumBits2 + data_bin[i+j+nBits];};
-      summation1 = summation1 + pow(2.0,nBits-k)*pow(-1.0,sumBits1);
-      summation2 = summation2 + pow(2.0,nBits-k)*pow(-1.0,sumBits2);
-      data_mqam[counter].real(summation1/sqrt(2));
-      data_mqam[counter].imag(summation2/sqrt(2)); 
-      //  std::cout << data_mqam[counter].real() << ", " << data_mqam[counter].imag() << std::endl;
-      //std::cout << sumBits2 << std::endl;
-    }
-    counter++;
-  }
-}
+  int nCar=128;
+  int nUsedC=89;
+  int nPilotC=10;
+  int pre=18;
+  int post=1;
+  int nDataBin=10000;
+  int nPilotData=2000;
+  int nBits=4;
 
-void tx_funct(  int N,int nUsedC,int nPilotC,int pre,int post,int nDataBin, int nPilotData,int nBits,double data_pattern[],double data_bin[],double data_pil[],double pilot_pattern[],short output[]){
+  //Load data and initialization parameters
+  //Read data from a file
+  double data_bin[nDataBin];
+  std::ifstream ifs( "dataBinNPaq.dat" , std::ifstream::in );
+  ifs.read((char * )data_bin,nDataBin*sizeof(double));
+  ifs.close();
+  
+  //Read pilots from a file;
+  double data_pil[nPilotData];
+  std::ifstream ifs2( "dataPilotN.dat" , std::ifstream::in );
+  ifs2.read((char * )data_pil,nPilotData*sizeof(double));
+  ifs2.close();
+  
+  //Read data pattern from a file
+  double data_pattern[nUsedC];
+  std::ifstream ifs3( "dataPattern.dat" , std::ifstream::in );
+  ifs3.read((char * )data_pattern,nUsedC*sizeof(double));
+  ifs3.close();
+  
+  //Read pilot pattern from a file
+  double pilot_pattern[nPilotC];
+  std::ifstream ifs4( "pilotPattern.dat" , std::ifstream::in );
+  ifs4.read((char * )pilot_pattern,nPilotC*sizeof(double));
+  ifs4.close();
 
   cvec outBuffer(0);
+
  //M-QAM mapping
-  int nQAM=nDataBin/(nBits*2); 
-     std::cout << "Number of symbols" <<nQAM <<std::endl;
-     std::complex<double> dataMapped[nQAM];
-     if(nBits==1){
-     qpsk(data_bin,dataMapped, nDataBin);
-     }
-     else if(nBits>1){
-     mqam(data_bin,dataMapped, nDataBin, nBits);
-     }
-     else{cerr << "Not known modulation for!" <<"\n";;}
-     std::complex<double> *pilotComp=(std::complex<double> *) data_pil;
-     std::cout << "- mapping - check!" << std::endl;
+  bvec dataBvec(nDataBin);
+  int nQAM=nDataBin/(log2(nBits)); 
+  QAM md(nBits);
+  cvec dataMapped(nQAM);
+  for(int i=0;i<nDataBin;i++){
+    dataBvec.set(i,(bin) data_bin[i] );
+  }
+  std::complex<double> *pilotComp=(std::complex<double> *) data_pil;
+  std::cout << "- mapping - check!" << std::endl;
+  md.modulate_bits(dataBvec,dataMapped);
+  // for(int i=0;i<nQAM;i++){
+  // std::cout << dataMapped.get(i) << std::endl;
+  // }
 
   //Serial2Serial
-     std::complex<double> shortBuffer[nUsedC];
-     std::complex<double> shortPilot[nPilotC];
-     bool firstDone = false;
-     for(int i=0;i<nQAM;){
-       for(int j=0;j<nUsedC;j++){
-	 if(i>=nQAM){
-	   shortBuffer[j]=0;//Zero padding --> need of random sequence instead of zeros;
+  bool firstDone=false;
+  cvec shortBuffer(nUsedC);
+  std::complex<double> shortPilot[nPilotC];
+  for(int i=0;i<nQAM;){
+    for(int j=0;j<nUsedC;j++){
+      if(i>=nQAM){
+	shortBuffer.set(j,0);//Zero padding --> need of random sequence instead of zeros;
 	   i++;  
-	 }         
-	 else {shortBuffer[j]=dataMapped[i++];}
-       }
-       for(int j=0;j<nPilotC;j++){
-	 shortPilot[j]=pilotComp[(i/nUsedC-1)*nPilotC+j];
-       }
-       cvec shortFrame=serial2serial(shortBuffer, shortPilot,data_pattern,pilot_pattern,N, nUsedC, nPilotC,pre,post,firstDone);
-       outBuffer.ins(outBuffer.length(),shortFrame);
-     }
-     std::cout << "- serial2serial - check!" << std::endl;
-
-     //std::cout << outBuffer.length()<< std::endl;
+      }         
+      else {shortBuffer.set(j,dataMapped.get(i++));}
+    }
+    
+    for(int j=0;j<nPilotC;j++){
+      shortPilot[j]=pilotComp[(i/nUsedC-1)*nPilotC+j];
+    }
+    cvec shortFrame=serial2serial(shortBuffer, shortPilot,data_pattern,pilot_pattern,nCar, nUsedC, nPilotC,pre,post,firstDone);
+    outBuffer.ins(outBuffer.length(),shortFrame);
+  }
+  std::cout << "- serial2serial - check!" << std::endl;
+  std::cout << outBuffer.length()<< std::endl;
+  
   //Training sequence + upsample(and store it in a vec)
-    int amp=1;
+    double amp=0.5;
     int nTrain=20;
     int Q=4;
     double train[2*nTrain];
@@ -205,7 +179,7 @@ void tx_funct(  int N,int nUsedC,int nPilotC,int pre,int post,int nDataBin, int 
       output[w+nGuard]=(short) ampTotal*std::real(tmp);
       output[++w+nGuard]=(short) ampTotal*std::imag(tmp);
     }
-    fill_n(&output[w+nGuard-1],nGuard,0);
+    fill_n(&output[w+nGuard],nGuard,0);
     std::cout << "- done - check!" << std::endl;
 
 }

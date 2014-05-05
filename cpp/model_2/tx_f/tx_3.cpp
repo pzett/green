@@ -38,7 +38,7 @@
 
 namespace po = boost::program_options;
 
-extern void tx_funct(  int N,int nUsedC,int nPilotC,int pre,int post,int nDataBin, int nPilotData,int nGuard,double data_pattern[],double data_bin[],double data_pil[],double pilot_pattern[],short output[]);
+extern void tx_funct(short output[]);
 
 int UHD_SAFE_MAIN(int argc, char *argv[]){
 
@@ -79,7 +79,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     ("help", "help message")
     ("args", po::value<std::string>(&args)->default_value(""), "simple uhd device address args")
     ("secs", po::value<double>(&seconds_in_future)->default_value(3), "number of seconds in the future to transmit")
-    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(82714), "total number of samples to transmit")
+    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(8479), "total number of samples to transmit")
     ("txrate", po::value<double>(&tx_rate)->default_value(100e6/4), "rate of outgoing samples")
     ("freq", po::value<double>(&freq)->default_value(5.5e9), "rf center frequency in Hz")
     ("LOoffset", po::value<double>(&LOoffset)->default_value(0), "Offset between main LO and center frequency")
@@ -108,14 +108,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
   //////// Create buffer storage to pass to USRP -> complex short always ///////////////////
  
-  int nCar=128;
-  int nUsedC=89;
-  int nPilotC=10;
-  int pre=18;
-  int post=1;
-  int nDataBin=100000;
-  int nPilotData=20000;
-  int nBits=1;
+
   //int outputSize =(1+ceil((nDataBin/(2*nBits))/nUsedC))*(nCar+pre+post)+2*nGuard+4*nTrain;
   int nAll=total_num_samps*2;
   short *all;
@@ -144,35 +137,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
   }else{
 
-   //Load data and initialization parameters
-    //Read data from a file
-    double data_bin[nDataBin];
-    std::ifstream ifs( "dataBinNPaq.dat" , std::ifstream::in );
-    ifs.read((char * )data_bin,nDataBin*sizeof(double));
-    ifs.close();
-
-    //Read pilots from a file;
-    double data_pil[nPilotData];
-    std::ifstream ifs2( "dataPilotN.dat" , std::ifstream::in );
-    ifs2.read((char * )data_pil,nPilotData*sizeof(double));
-    ifs2.close();
-
-    //Read data pattern from a file
-    double data_pattern[nUsedC];
-    std::ifstream ifs3( "dataPattern.dat" , std::ifstream::in );
-    ifs3.read((char * )data_pattern,nUsedC*sizeof(double));
-    ifs3.close();
-
-    //Read pilot pattern from a file
-    double pilot_pattern[nPilotC];
-    std::ifstream ifs4( "pilotPattern.dat" , std::ifstream::in );
-    ifs4.read((char * )pilot_pattern,nPilotC*sizeof(double));
-    ifs4.close();
-
-
-
+  
     // Call the function creating the data
-    tx_funct(nCar,nUsedC,nPilotC,pre,post,nDataBin,nPilotData,nBits,data_pattern,data_bin,data_pil,pilot_pattern,all);
+    tx_funct(all);
 
     // for(int i=0; i<(int)(2*total_num_samps);i++){
     //   std::cout << "all["<<i<<"] = " << all[i]<<"\n";
@@ -206,7 +173,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 
   //////////////////////////DO NOT MODIFY THE FOLLOWING PART///////////////////////////////////////////////
 
-
+  
   //create a USRP device and streamer
   dev_addr["addr0"]="192.168.10.2";
     
@@ -313,10 +280,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     md.end_of_burst = false;
     md.has_time_spec = false;
       
-     
+    std::cout << buffer[100] << std::endl; 
     //send the entire buffer, let the driver handle fragmentation
     tx_stream->send(buffer,2*total_num_samps,md,60);
-
       
     md.start_of_burst = false;
 
@@ -352,6 +318,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
       ofs.write((char * ) buffer, 2*total_num_samps*sizeof(short));
       ofs.close();
 
+      for(int i=60;i<200;i++){
+	std::cout << buffer[i] << std::endl;
+      }
     
       std::cout << "\nData only sent once \n";
 
