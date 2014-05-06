@@ -38,7 +38,7 @@ cmd_str=[cmd_str,' --buffersize=',num2str(length(temp)),...
 cmd_str
 system(cmd_str);
 
-% Load cpp data from file s(note the type)
+% Load cpp data from file (note the type)
 
   %load cross correlation:  
   fid1=fopen('xcorr.dat','r');
@@ -162,6 +162,15 @@ system(cmd_str);
     end
  end
  
+  figure(1)
+  subplot(4,2,5)
+  plot(int_pilot_gain(1,:))
+  title('Channel Gain Estimation')
+
+  figure(2)
+  subplot(2,1,1)
+  surf(int_pilot_gain)
+ 
  %load interp Phase gain:
   
  fid=fopen('int_pilot_phase.dat','r');
@@ -177,21 +186,51 @@ system(cmd_str);
     end
  end
  
+  figure(1)
+  subplot(4,2,6)
+  plot(int_pilot_phase(1,:))
+  title('Channel Phase Estimation')
+  
+  figure(2)
+  subplot(2,1,2)
+  surf(int_pilot_phase)
+ 
+  %load OFDM symbols corrected and without CP:
+  
+ fid=fopen('qpsk_data.dat','r');
+ temp=fread(fid,2*89*562,'double');
+ fclose(fid); 
+
+ count=1; 
+ data_qpsk=zeros(562,89);
+ for i=1:562
+    for k=1:89
+        data_qpsk(i,k)=complex(temp(count),temp(count+1));   
+        count=count+2;
+    end
+ end
+ 
+  figure(1)
+  subplot(4,2,7)
+  plot(reshape(data_qpsk,1,89*562),'.b')
+  title('OFDM QPSK received constellation')
+ 
   %load binary data:
   
  fid=fopen('dataBin.dat','r');
  temp=fread(fid, 2*89*562,'short');
  fclose(fid); 
-
+ 
+ 
 
  rx_data_bin=temp;
  
- BER=sum(abs(data.'-rx_data_bin))/length(rx_data_bin)
+ error=(abs(data.'-rx_data_bin));
+ BER=sum(error)/length(rx_data_bin)
  
- 
-%   figure(1)
-%   subplot(4,2,4)
-%   plot(real((dataOFDM_cpp(1,:))));
-%   title('1st OFDM symbol')
-%Matlab simulation:
+ figure(1)
+  subplot(4,2,8)
+  plot(error)
+  title('OFDM QPSK received constellation')
+
 

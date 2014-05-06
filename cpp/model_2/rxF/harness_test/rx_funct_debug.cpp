@@ -1038,6 +1038,7 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
      constOFDM.push(dataAux);
    }
 
+   saveQueueComplex(constOFDM, nUsedCarrier, (char*)"qpsk_data.dat");
    
   
     std::cout<<" Channel Impulse response corrected - checked!\n\n";

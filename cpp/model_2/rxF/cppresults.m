@@ -1,142 +1,215 @@
-close all;
+% harness.m
+% For more information search for "README:" in harness.cpp.
+
 clear all;
+close all;
 
-%% Data Received
-
-N_samps=72920;
-fid1=fopen('received.dat','r');
-x_rec=fread(fid1, N_samps,'short');
-fclose(fid1);
-
-
-xComplex_rec= zeros(1,N_samps/2);
-count = 1;
-for i=1:2:N_samps
-    xComplex_rec(count) = complex(x_rec(i),x_rec(i+1));
-    count = count+1;
-end
-
-length(xComplex_rec);
+% Read data from file
+load('rx_data_23.mat')
+load('tx_data_for_inter.mat')
 
 figure(1)
-subplot(2,1,1)
-plot(real(xComplex_rec));
-subplot(2,1,2)
-semilogy(linspace(0,1,2^16),abs(fft(xComplex_rec,2^16)))
-%pwelch(xComplex_rec)
-
-%% Processing stages
-
-
-fid1=fopen('x_freq.dat','r');
-x_freq=fread(fid1, N_samps/2,'double');
-fclose(fid1);
-
-
-xComplex_freq= zeros(1,N_samps/2);
-count = 1;
-for i=1:2:N_samps
-    xComplex_freq(count) = complex(x_freq(i),x_freq(i+1));
-    count = count+1;
-end
-
-length(xComplex_freq);
-
-figure(2)
-subplot(3,2,1)
-plot(real(xComplex_freq));
-
-fid1=fopen('x_matched.dat','r');
-x_matched=fread(fid1, N_samps,'double');
-fclose(fid1);
-
-
-xComplex_matched= zeros(1,N_samps/2);
-count = 1;
-for i=1:2:N_samps
-    xComplex_matched(count) = complex(x_matched(i),x_matched(i+1));
-    count = count+1;
-end
-
-length(xComplex_matched);
-
-subplot(3,2,3)
-plot(real(xComplex_matched));
+subplot(4,2,1)
+plot(real(rx_data_23))
+title('Data for test')
+subplot(4,2,2)
+semilogy(abs(fft(rx_data_23)))
+title('Data fft')
 
 
 
-fid1=fopen('x_downsamp.dat','r');
-x_downsamp=fread(fid1, 2*9480,'double');
-fclose(fid1);
+
+  %load cross correlation:  
+  fid1=fopen('xcorr.dat','r');
+  xcorrAbs=fread(fid1, 165364,'double');
+  fclose(fid1);
+
+  length(xcorrAbs);
+
+  figure(1)
+  subplot(4,2,3)
+  plot(xcorrAbs);
+  title('xcorr')
+
+  %load OFDM symbols corrected and without CP:
+  
+ fid=fopen('ofdm_cp.dat','r');
+ temp=fread(fid,143872,'double');
+ fclose(fid); 
+
+ count=1; 
+ dataOFDM_cpp=zeros(562,128);
+ for i=1:562
+    for k=1:128
+        dataOFDM_cpp(i,k)=complex(temp(count),temp(count+1));   
+        count=count+2;
+    end
+ end
+ 
+  figure(1)
+  subplot(4,2,4)
+  plot(real((dataOFDM_cpp(1,:))));
+  title('1st OFDM symbol')
+
+  %load received Pilot gain:
+  
+ fid=fopen('rx_pilot_gain.dat','r');
+ temp=fread(fid,10*562,'double');
+ fclose(fid); 
+
+ count=1; 
+ pilot_gain=zeros(562,10);
+ for i=1:562
+    for k=1:10
+        pilot_gain(i,k)=temp(count);   
+        count=count+1;
+    end
+ end
+ 
+ %load received Pilot phase:
+  
+ fid=fopen('rx_pilot_phase.dat','r');
+ temp=fread(fid,10*562,'double');
+ fclose(fid); 
+
+ count=1; 
+ pilot_phase=zeros(562,10);
+ for i=1:562
+    for k=1:10
+        pilot_phase(i,k)=temp(count);   
+        count=count+1;
+    end
+ end
+ 
+ 
+ fid=fopen('cons_ofdm.dat','r');
+ temp=fread(fid,2*89*562,'double');
+ fclose(fid); 
+
+ count=1; 
+ consOFDM_cpp=zeros(562,89);
+ for i=1:562
+    for k=1:89
+        consOFDM_cpp(i,k)=complex(temp(count),temp(count+1));   
+        count=count+2;
+    end
+ end
+ 
+ %load filtered Pilot gain:
+  
+ fid=fopen('filt_pilot_gain.dat','r');
+ temp=fread(fid,10*562,'double');
+ fclose(fid); 
+
+ count=1; 
+ filt_pilot_gain=zeros(562,10);
+ for i=1:562
+    for k=1:10
+        filt_pilot_gain(i,k)=temp(count);   
+        count=count+1;
+    end
+ end
+ 
+ %load filtered Phase gain:
+  
+ fid=fopen('filt_pilot_phase.dat','r');
+ temp=fread(fid,10*562,'double');
+ fclose(fid); 
+
+ count=1; 
+ filt_pilot_phase=zeros(562,10);
+ for i=1:562
+    for k=1:10
+        filt_pilot_phase(i,k)=temp(count);   
+        count=count+1;
+    end
+ end
+ 
+ 
+ %load interp Pilot gain:
+  
+ fid=fopen('int_pilot_gain.dat','r');
+ temp=fread(fid,128*562,'double');
+ fclose(fid); 
+
+ count=1; 
+ int_pilot_gain=zeros(562,128);
+ for i=1:562
+    for k=1:128
+        int_pilot_gain(i,k)=temp(count);   
+        count=count+1;
+    end
+ end
+ 
+  figure(1)
+  subplot(4,2,5)
+  plot(int_pilot_gain(1,:))
+  title('Channel Gain Estimation')
+
+  figure(2)
+  subplot(2,1,1)
+  surf(int_pilot_gain)
+ 
+ %load interp Phase gain:
+  
+ fid=fopen('int_pilot_phase.dat','r');
+ temp=fread(fid,128*562,'double');
+ fclose(fid); 
+
+ count=1; 
+ int_pilot_phase=zeros(562,128);
+ for i=1:562
+    for k=1:128
+        int_pilot_phase(i,k)=temp(count);   
+        count=count+1;
+    end
+ end
+ 
+  figure(1)
+  subplot(4,2,6)
+  plot(int_pilot_phase(1,:))
+  title('Channel Phase Estimation')
+  
+  figure(2)
+  subplot(2,1,2)
+  surf(int_pilot_phase)
+ 
+  %load OFDM symbols corrected and without CP:
+  
+ fid=fopen('qpsk_data.dat','r');
+ temp=fread(fid,2*89*562,'double');
+ fclose(fid); 
+
+ count=1; 
+ data_qpsk=zeros(562,89);
+ for i=1:562
+    for k=1:89
+        data_qpsk(i,k)=complex(temp(count),temp(count+1));   
+        count=count+2;
+    end
+ end
+ 
+  figure(1)
+  subplot(4,2,7)
+  plot(reshape(data_qpsk,1,89*562),'.b')
+  title('OFDM QPSK received constellation')
+ 
+  %load binary data:
+  
+ fid=fopen('dataBin.dat','r');
+ temp=fread(fid, 2*89*562,'short');
+ fclose(fid); 
+ 
+ 
+
+ rx_data_bin=temp;
+ 
+ error=(abs(data.'-rx_data_bin));
+ BER=sum(error)/length(rx_data_bin)
+ 
+ figure(1)
+  subplot(4,2,8)
+  plot(error)
+  title('OFDM QPSK received constellation')
 
 
-xComplex_downsamp= zeros(1,9480);
-count = 1;
-for i=1:2:9480*2
-    xComplex_downsamp(count) = complex(x_downsamp(i),x_downsamp(i+1));
-    count = count+1;
-end
-
-length(xComplex_downsamp);
-
-subplot(3,2,2)
-plot(xComplex_downsamp,'.');
-
-
-fid1=fopen('xcorr.dat','r');
-xcorr=fread(fid1, N_samps,'double');
-fclose(fid1);
-
-
-xComplex_corr= zeros(1,N_samps/2);
-count = 1;
-for i=1:2:N_samps
-    xComplex_corr(count) = complex(xcorr(i),xcorr(i+1));
-    count = count+1;
-end
-
-length(xComplex_corr);
-
-figure(2)
-subplot(3,2,5)
-plot(abs(xComplex_corr));
-
-
-
-fid1=fopen('x_filt.dat','r');
-x_filt=fread(fid1, 2*9480,'double');
-fclose(fid1);
-
-
-xComplex_filt= zeros(1,9480);
-count = 1;
-for i=1:2:9480*2
-    xComplex_filt(count) = complex(x_filt(i),x_filt(i+1));
-    count = count+1;
-end
-
-length(xComplex_filt);
-
-subplot(3,2,4)
-plot(xComplex_filt,'.');
-
-
-% Load data_sent from file (note the type)
-fid=fopen('data.dat','r');
-data_correct=fread(fid, 18760 ,'double');
-fclose(fid);
-
-
-% Load data from file (note the type)
-fid=fopen('decoded0.dat','r');
-temp=fread(fid, 18760 ,'short');
-fclose(fid);
-result_from_harness=temp;
-
-figure(2)
-subplot(3,2,6)
-plot(abs(result_from_harness-data_correct));
-title('C++ Rx processing');
-
-
-BER_cpp=sum(abs(result_from_harness-data_correct))/18760

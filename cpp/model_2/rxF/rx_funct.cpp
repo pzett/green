@@ -100,23 +100,34 @@ cvec synchCatchChannel(cvec dataC, cvec trainCUp, int Post, int Pre , double *ph
 
   //Search for the maximum
   double max=0.0;
-  int index=0;
+  int index=0, count=0;
+  double tmp[crossCorr.length()-dataC.length()+1];
   for(int i=dataC.length()-1;i<crossCorr.length();i++){
-    double tmp=abs(crossCorr[i]);
-    //DispVal(tmp);
-    if (tmp> max){
-      max=tmp;
+    tmp[count]=abs(crossCorr[i]);
+   
+    //DispVal(tmp[count]);
+    //DispVal(count);
+    if (tmp[count]> max && count<(crossCorr.length()-dataC.length()+1)/2  ){
+      max=tmp[count];
       index=i;
+     
     }
+     count++;
   }
+  
   index=index-dataC.length()+1;
-  //DispVal(index);
   *delay=index;
  //Computes Estimate of phase at the peak:
   *phiHat=arg(dataC(index));
 
+  // Save data to file
+     std::ofstream ofs( "xcorr.dat" , std::ifstream::out );
+     ofs.write((char * ) tmp, (crossCorr.length()-dataC.length()+1)*sizeof(double));
+     ofs.close();
+
+
    //std::cout<<"tsamp="<<index<<"\n";
-  //Removes received train train from data
+  //Removes received train from data
 
   cvec trainRecC(trainCUp.length());
   int i=index;
@@ -126,10 +137,10 @@ cvec synchCatchChannel(cvec dataC, cvec trainCUp, int Post, int Pre , double *ph
     //DispVal(count);
   }
   
-  std::complex< double > meanTrain=itpp::mean(trainRecC);
+  //std::complex< double > meanTrain=itpp::mean(trainRecC);
   //DispVal(meanTrain);
   
-  trainRecC=trainRecC-meanTrain;
+  //trainRecC=trainRecC-meanTrain;
 
   //std::cout<<"TrainRec"<<trainRecC<<"\n";
 
@@ -168,10 +179,7 @@ cvec synchCatchChannel(cvec dataC, cvec trainCUp, int Post, int Pre , double *ph
     SigmaYx.set(count, aux2[ini+count]);
     //std::cout<<"xcorr=\n"<<crossCorr[i]<<"\n";
   }
-   
-  //std::cout<<"SigmaYx=\n"<<SigmaYx<<"\n";
-
-    //Estimate of the channel:
+   //Estimate of the channel:
     cmat invSigmaYY=itpp::inv(SigmaYY);
     cvec theta_est=itpp::operator*(invSigmaYY,SigmaYx);
    
@@ -179,23 +187,56 @@ cvec synchCatchChannel(cvec dataC, cvec trainCUp, int Post, int Pre , double *ph
     // std::cout<<"Channel="<<theta_est<<"\n";
     
     //Compute the variance of the estimation:
+
+    trainCUp.ins(trainCUp.length(),complex<double>(0,0));
     
     cvec trainCEst=filter( theta_est, 1, trainCUp);
     //std::cout<<"trainCEst="<<trainCEst<<"\n";
-
+    
+    trainCEst.del(0);
     cvec crossEst=itpp::xcorr(trainRecC-trainCEst);
     //std::cout<<"crossEst="<<crossEst<<"\n";
     *sigmaSqrNoise=abs(crossEst(trainRecC.length()-1));
 
     return theta_est;
+ 
 }
 
+ 
+void saveQueueComplex(std::queue<cvec> s, int vecSize, char filename[])
+{
+  
+     int sizeQueue=s.size();
+     int tmpSize=vecSize*sizeQueue*2;
+     double tmp[tmpSize];
+     int count=0;
+    while(sizeQueue!=0){
+      itpp::cvec x= s.front();
+      s.pop();
+      for(int i=0;i<vecSize;i++){
+	//DispVal(count);
+	tmp[count]=x[i].real();
+	tmp[count+1]=x[i].imag();
+	
+	  count=count+2;
+      }
+      sizeQueue--;
+    }
+    
+    //DispVal(tmpSize);
+     std::ofstream ofs( filename , std::ifstream::out );
+     ofs.write((char * ) tmp, tmpSize*sizeof(double));
+     ofs.close();
 
+    
+    
+    return;
+}
 
-void print(std::queue<cvec> s)
+void printComplex(std::queue<cvec> s)
 {
   int sizeQueue=s.size();
-  DispVal(sizeQueue);
+  //DispVal(sizeQueue);
  
     while(sizeQueue!=0){
       cvec x= s.front();
@@ -205,7 +246,48 @@ void print(std::queue<cvec> s)
     }
     return;
 }
+void saveQueue(std::queue<vec> s, int vecSize, char filename[])
+{
+  
+     int sizeQueue=s.size();
+     int tmpSize=vecSize*sizeQueue;
+     double tmp[tmpSize];
+     int count=0;
+    while(sizeQueue!=0){
+      itpp::vec x= s.front();
+      s.pop();
+      for(int i=0;i<vecSize;i++){
+	//DispVal(count);
+	tmp[count]=x[i];
+		
+	  count=count+1;
+      }
+      sizeQueue--;
+    }
+    
 
+     std::ofstream ofs( filename , std::ifstream::out );
+     ofs.write((char * ) tmp, tmpSize*sizeof(double));
+     ofs.close();
+
+    
+    
+    return;
+}
+
+void print(std::queue<vec> s)
+{
+  int sizeQueue=s.size();
+  //DispVal(sizeQueue);
+ 
+    while(sizeQueue!=0){
+      vec x= s.front();
+      s.pop();
+      std::cout << x << "\n";
+      sizeQueue--;
+    }
+    return;
+}
 
 /** Removes the cyclic prefix, sufix. Corrects also the frequency shift and puts 
  *    the OFMD data in a queue   
@@ -265,27 +347,28 @@ void CPremove(cvec dataC, int tIni, int nCarriers, int nOFDM_symbols, int Pre, i
     mult= itpp::elem_mult(Pre1conj,Pre2); 	
   
     complex<double> sum=itpp::sum(mult);
-    double nuOff=arg(sum)/nCarriers;
-    DispVal(nuOff);
+    double nuOff=arg(sum)/(2*M_PI*nCarriers);
+    //DispVal(nuOff);
     
     complex<double> arg1;
    
     for(int i3=0; i3<nCarriers; i3++){
-      arg1=complex<double>(0,-1*nuOff);
+      arg1=complex<double>(0,-1*2*M_PI*nuOff*i3);
       aux[i3]=aux[i3]*exp(arg1);
     }
     //DispVal(aux);
-    data=itpp::fft(aux, nCarriers);
+    data=itpp::fft(aux);
     //DispVal(data);
       //Inserte data in Processing queue:
    
     OFDM_data.push(data);
 
-   DispVal(i1);
-   DispVal(pt);
+    //DispVal(i1);
+    //DispVal(pt);
    
   }
-  
+
+ 
   return;
 }
 
@@ -574,7 +657,7 @@ vec interp(vec pilotFFT, double pilot_pos[], int nPilot, int nElem){
     double step=pilotFFTd(i)/deltaI;
     //std::cout << step << std::endl;
     for (int ii=0;ii<deltaI; ii++ ){
-      out.set(mod((pilotP(i)+ii),(double) nElem), pilotFFTp(i)+ii*step);
+      out.set(modP((pilotP(i)+ii),(double) nElem), pilotFFTp(i)+ii*step);
       //std::cout << out << std::endl;
     }
   }
@@ -599,6 +682,7 @@ vec interp(vec pilotFFT, double pilot_pos[], int nPilot, int nElem){
       //std::cout << out<<std::endl;
     }  
   }
+  
   return out;
 }
 
@@ -634,11 +718,11 @@ vec interpPhase(vec pilotFFT, double pilot_pos[], int nPilot, int nElem){
     int deltaI=pilotP(i+1)-pilotP(i);// Difference in index
     //std::cout <<i<<  " delta " <<deltaI << std::endl;
  
-    double step=(mod(pilotFFTd(i)+M_PI,2*M_PI)-M_PI)/deltaI;// Difference in phase
+    double step=(modP(pilotFFTd(i)+M_PI,2*M_PI)-M_PI)/deltaI;// Difference in phase
   
     //std::cout << step << std::endl;
     for (int ii=0;ii<deltaI; ii++ ){
-      out.set(mod((pilotP(i)+ii),(double) nElem), mod(pilotFFTp(i)+ii*step+M_PI,2*M_PI)-M_PI);
+      out.set(modP((pilotP(i)+ii),(double) nElem), modP(pilotFFTp(i)+ii*step+M_PI,2*M_PI)-M_PI);
       //std::cout << out << std::endl;
     }
   }
@@ -656,10 +740,10 @@ vec interpPhase(vec pilotFFT, double pilot_pos[], int nPilot, int nElem){
   for (int i=lPilot+2;i<nPilot; i++){
     int deltaI=pilotP(i+1)-pilotP(i);
     //std::cout <<i<<  " delta " <<deltaI << std::endl;
-    double step=(mod(pilotFFTd(i)+M_PI,2*M_PI)-M_PI)/deltaI;// Difference in phase
+    double step=(modP(pilotFFTd(i)+M_PI,2*M_PI)-M_PI)/deltaI;// Difference in phase
     //std::cout << step << std::endl;
     for (int ii=0;ii<deltaI; ii++ ){
-      out.set(pilotP(i)+ii,mod(pilotFFTp(i)+ii*step+M_PI,2*M_PI)-M_PI );
+      out.set(pilotP(i)+ii,modP(pilotFFTp(i)+ii*step+M_PI,2*M_PI)-M_PI );
       //std::cout << out<<std::endl;
     }  
   }
@@ -670,6 +754,8 @@ vec interpPhase(vec pilotFFT, double pilot_pos[], int nPilot, int nElem){
 ///////////////////////////////////////MAIN FUNCTION////////////////////////////////////////////////////////////
 
 void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[], int nDataB){
+
+  std::cout<<"Running Receiver!\n";
 
   //Conversion to double -> More precision in processing
   double buff_double[buffersize];
@@ -691,6 +777,8 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
     exit(1);
   }
   
+ 
+
   //Upsampling training sequence:
   int Q=4;
   std::complex<double> trainSeqUp[Q*nTrainSeq];
@@ -705,45 +793,33 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
   double phiHat, AHat, sigmaSqrNoise;
   int delay;
 
-    itpp::cvec thetaEst = synchCatchChannel(dataCvec, trainC, FIR_pre, FIR_post , &phiHat,  &AHat, &delay, &sigmaSqrNoise);
+
+    itpp::cvec thetaEst = synchCatchChannel(dataCvec, trainC, FIR_post, FIR_pre , &phiHat,  &AHat, &delay, &sigmaSqrNoise);
 
     std::cout<<"Channel="<<thetaEst<<"\n";
     std::cout <<"tsamp="<<delay<<"\n";
     std::cout<<"phase_hat="<<phiHat<<"\n";
     std::cout<<"A_hat="<<AHat<<"\n";
-    std::cout<<"sigma_square_noise="<<sigmaSqrNoise<<"\n";
-    std::cout<<"Synchronization and channel estimation done!\n\n";
-
-  
+    std::cout<<"sigma_square_noise="<<sigmaSqrNoise<<"\n\n";
+    std::cout<<" Synchronization and channel estimation done - checked!\n\n";
+    
 
  //CP removal of OFDM symbols and FFT to get OFDM data:
     int tIni=delay+Q*nTrainSeq; //Beginnig of OFDM data
+    //DispVal(tIni);
     int PostFix=1, PreFix=18;
     int nCarriers=128;
-    int nSymbolsOFDM=235;
+    int nSymbolsOFDM=562;
     
     std::queue<cvec> dataOFDM;
 
     CPremove(dataCvec, tIni, nCarriers, nSymbolsOFDM, PreFix, PostFix, dataOFDM);
-    std::cout<<" Cyclic Prefix removed and OFDM data obtained!\n\n";
+    std::cout<<" Cyclic Prefix removed and OFDM data obtained - checked!\n\n";
 
-  // Save data to file -> Atebtion to not empty queue:
-    //  int sizeQueue=dataOFDM.size();
-    //  complex<double> result[sizeQueue*nCarriers];
-    //  int count=0;
-    // while(sizeQueue!=0){
-    //   itpp::cvec x= dataOFDM.front();
-    //   dataOFDM.pop();
-    //   for(int i=0;i<nCarriers;i++){
-    // 	result[count]=x[i];
-    //   }
-    //   sizeQueue--;
-    // }
+    saveQueueComplex(dataOFDM, nCarriers, (char*)"ofdm_cp.dat");
 
-    //  // Write data to file
-    //  std::ofstream ofs( "OFDM_data.dat" , std::ifstream::out );
-    //  ofs.write((char * )result, 2*sizeQueue*nCarriers*sizeof(double));
-    //  ofs.close();
+    //printComplex(dataOFDM);
+
 
 
 
@@ -762,6 +838,8 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
     exit(1);
   }
 
+  
+
      //Read data Patern from file: 
   int nUsedCarrier=89;
   double * dataPattern;
@@ -775,11 +853,13 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
     exit(1);
   }
 
+  
+
    //Read Pilots from file: 
-  int nPilotData=10000;
+  int nPilotData=nSymbolsOFDM*nUsedPilot;
   complex<double> * dataPilot;
   dataPilot= new complex<double>[nPilotData];
-  std::ifstream ifs3( "dataPilotN.dat" , std::ifstream::in );
+  std::ifstream ifs3( "dataPilot.dat" , std::ifstream::in );
   if(ifs3.is_open()){
     ifs3.read((char * )dataPilot, 2*nPilotData*sizeof(double));
     ifs3.close();
@@ -788,8 +868,12 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
     exit(1);
   }
 
+  // for(int i=0;i<11;i++){
+  //   DispVal(dataPilot[i]);
+  //   DispVal(i);
+  // }
   
-  
+ 
 
   //Take OFDM data and Pilots:
   //Create 3 queues: OFDM data, channel gain and channel phase:
@@ -805,7 +889,7 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
     dataOFDM.pop();
     int m=0,n=0;
     double gain, phase;
-    for(int i2=0;i2<nUsedCarrier;i2++){
+    for(int i2=0;i2<nCarriers;i2++){
       if (pilotPattern[m]-1==i2){	
 	gain=std::abs(aux[i2]/dataPilot[countPilot]);
 	phase=std::arg(aux[i2]/dataPilot[countPilot]);
@@ -814,13 +898,12 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
 	m++;
 	countPilot++;
       }
-      else if (dataPattern[n]-1==i2){
+      if (dataPattern[n]-1==i2){
 	dataAux.set(n, aux[i2]);   
 	n++;
-      }else{
-	std::cerr<<"Error in data!\n";
-	exit(1);
       }
+
+     
      
     }
     
@@ -828,9 +911,17 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
     constOFDM.push(dataAux);
     PilotGain.push(gainAux);
     PilotPhase.push(phaseAux);
+
+    
   }
   
-   std::cout<<" Data and Pilots obtained!\n\n";
+  
+  
+  //print(PilotGain);
+  saveQueue(PilotGain, nUsedPilot, (char*) "rx_pilot_gain.dat");
+  saveQueue(PilotPhase, nUsedPilot, (char*) "rx_pilot_phase.dat");
+  saveQueueComplex(constOFDM, nUsedCarrier , (char*) "cons_ofdm.dmakeat");
+  std::cout<<" Data and Pilots obtained - checked!\n\n";
 
 
 
@@ -838,16 +929,16 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
    
    //Initialization of the kalman with channel coarse estimation:
    
-   cvec thetaEstAux(nUsedCarrier);
+   cvec thetaEstAux(nCarriers);
 
-   for(int i=0,count=0;i<nUsedCarrier;i++){
+   for(int i=0,count=0;i<nCarriers;i++){
      if(i<=FIR_post){
        thetaEstAux.set(i,thetaEst[i+FIR_pre]);
      }
-     if(i>FIR_post && i<nUsedCarrier-FIR_pre){
+     if(i>FIR_post && i<nCarriers-FIR_pre){
        thetaEstAux.set(i,complex<double>(0,0));
      }
-     if(i>=nUsedCarrier-FIR_pre){
+     if(i>=nCarriers-FIR_pre){
        thetaEstAux.set(i,thetaEst[count]);
        count++;
      }
@@ -858,12 +949,12 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
    vec x0Gain(nUsedPilot);
    std::vector<itpp::mat> x0Phase(nUsedPilot);
    
-   double freqEst=0.1;//freq_off_est*(nr_carriers+length_cpre+length_cpost)/Q -> HEEEEEEEEEEEEEREEEEEEEEEE
+   double freqEst=0.0;
    itpp::mat aux(2,1);
 
    int m=0;
    double gain, phase;
-   for(int i=0;i<nUsedCarrier;i++){
+   for(int i=0;i<nCarriers;i++){
     if (pilotPattern[m]-1==i){	
       gain=std::abs(fftTheta[i]);
       phase=std::arg(fftTheta[i]);
@@ -875,18 +966,27 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
     }
    }
 
+
    //Kalman filter on the Gain:
-   std::queue<itpp::vec> filtPilotGain=kalmanGain (PilotGain,  nUsedPilot,  1, 1, 1, 0.1, 0.1,  x0Gain, 0.1);
+   std::queue<itpp::vec> filtPilotGain=kalmanGain (PilotGain,  nUsedPilot,  1, 1, 1, 0.001, 0.1,  x0Gain, 3);
+
+   //print(filtPilotGain);
+   saveQueue(filtPilotGain, nUsedPilot, (char*)"filt_pilot_gain.dat");
+
 
    //Kalman filter in the Phase:
    std::queue<itpp::vec> filtPilotPhase=kalmanPhase(PilotPhase, nUsedPilot, ("1 6.28318 ; 0 1"), ("1 0 ; 0 0"),("1 0"),("0.001 0; 0 0"), ("0.1"), x0Phase,("3 0 ; 0 9.8696"));
-   
-   std::cout<<"Pilot Gain and Phase filtered!\n\n";
 
+   saveQueue(filtPilotPhase, nUsedPilot, (char*)"filt_pilot_phase.dat");
+   
+   std::cout<<" Pilot Gain and Phase filtered - checked!\n\n";
+
+ 
 
    //Channel Interpolation:
    
    itpp::vec gainInterp(nUsedCarrier), phaseInterp(nUsedCarrier);
+   
 
    for(int i1=0;i1<nSymbolsOFDM;i1++){
 
@@ -894,16 +994,22 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
      filtPilotGain.pop();
      phaseAux=filtPilotPhase.front();
      filtPilotPhase.pop();
-
-     gainInterp=interp( gainAux,pilotPattern,nUsedPilot,nUsedCarrier);
-     phaseInterp=interpPhase(phaseAux, pilotPattern, nUsedPilot, nUsedCarrier);
+    
+     gainInterp=interp( gainAux, pilotPattern,nUsedPilot, nCarriers);
+     phaseInterp=interpPhase(phaseAux, pilotPattern, nUsedPilot, nCarriers);
      
+
      filtPilotGain.push(gainInterp);
      filtPilotPhase.push(phaseInterp);
 
    }
 
-   std::cout<<"Pilot Gain and Phase interpolation done!\n\n";
+   saveQueue(filtPilotGain, nCarriers, (char*)"int_pilot_gain.dat");
+   saveQueue(filtPilotPhase, nCarriers, (char*)"int_pilot_phase.dat");
+
+   std::cout<<" Pilot Gain and Phase interpolation done - checked!\n\n";
+   
+  
 
    //Channel Correction
    complex<double> correct, phaseCorrect;
@@ -918,21 +1024,29 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
      constOFDM.pop();
 
      //Correction of channel impulse responce:
-     for(int i2=0; i2<nUsedCarrier; i2++){
-       phaseCorrect=std::exp(complex<double>(1,phaseAux[i2]));
-       correct=dataAux[i2]/(gainInterp[i2]*phaseCorrect);
-       dataAux.set(i2,correct);	 
+     int n=0;
+     for(int i2=0; i2<nCarriers; i2++){
+       
+       if (dataPattern[n]-1==i2){
+	 phaseCorrect=std::exp(complex<double>(1,phaseInterp[i2]));
+	 correct=dataAux[n]/(gainInterp[i2]*phaseCorrect);
+	 dataAux.set(n,correct);
+	 n++;
+       }
      }
 
      constOFDM.push(dataAux);
-
    }
+
+   saveQueueComplex(constOFDM, nUsedCarrier, (char*)"qpsk_data.dat");
+   
   
-    std::cout<<"Channel Impulse response corrected!\n\n";
+    std::cout<<" Channel Impulse response corrected - checked!\n\n";
  
 
    //Detection
-    
+   
+   nDataB=2*nUsedCarrier*nSymbolsOFDM;
    complex<double> DataFilt[nUsedCarrier*nSymbolsOFDM]; 
    int count=0;
     for(int i1=0;i1<nSymbolsOFDM;i1++){
@@ -950,14 +1064,22 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
 
    }
 
+    
 
    hardDetect(DataFilt, data_bin, nDataB);
 
+   //for(int i=0; i<nDataB; i++)DispVal(data_bin[i]);
 
-   std::cout << " Detected! " << std::endl;
+   // Save data to file
+     std::ofstream ofs1( "dataBin.dat" , std::ifstream::out );
+     ofs1.write((char * )data_bin, nDataB*sizeof(short));
+     ofs1.close();
+
+
+   std::cout << " Detected - checked! " << std::endl;
 
    std::cout << " " << std::endl;
-   std::cout << " Done! " << std::endl;
+   std::cout << " Processing Done! " << std::endl;
 
    return;
 
