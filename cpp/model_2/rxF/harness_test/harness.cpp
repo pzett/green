@@ -128,10 +128,6 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     receiverSignalProcessing(data_r,buffersize, data_bin, nDataB);
 
 
-     // Save data to file
-     // std::ofstream ofs1( "data_from_harness.dat" , std::ifstream::out );
-     // ofs1.write((char * )result, data_size*sizeof(double));
-     // ofs1.close();
  
 
     return 0;

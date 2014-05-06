@@ -657,7 +657,7 @@ vec interp(vec pilotFFT, double pilot_pos[], int nPilot, int nElem){
     double step=pilotFFTd(i)/deltaI;
     //std::cout << step << std::endl;
     for (int ii=0;ii<deltaI; ii++ ){
-      out.set(mod((pilotP(i)+ii),(double) nElem), pilotFFTp(i)+ii*step);
+      out.set(modP((pilotP(i)+ii),(double) nElem), pilotFFTp(i)+ii*step);
       //std::cout << out << std::endl;
     }
   }
@@ -682,6 +682,7 @@ vec interp(vec pilotFFT, double pilot_pos[], int nPilot, int nElem){
       //std::cout << out<<std::endl;
     }  
   }
+  
   return out;
 }
 
@@ -717,11 +718,11 @@ vec interpPhase(vec pilotFFT, double pilot_pos[], int nPilot, int nElem){
     int deltaI=pilotP(i+1)-pilotP(i);// Difference in index
     //std::cout <<i<<  " delta " <<deltaI << std::endl;
  
-    double step=(mod(pilotFFTd(i)+M_PI,2*M_PI)-M_PI)/deltaI;// Difference in phase
+    double step=(modP(pilotFFTd(i)+M_PI,2*M_PI)-M_PI)/deltaI;// Difference in phase
   
     //std::cout << step << std::endl;
     for (int ii=0;ii<deltaI; ii++ ){
-      out.set(mod((pilotP(i)+ii),(double) nElem), mod(pilotFFTp(i)+ii*step+M_PI,2*M_PI)-M_PI);
+      out.set(modP((pilotP(i)+ii),(double) nElem), modP(pilotFFTp(i)+ii*step+M_PI,2*M_PI)-M_PI);
       //std::cout << out << std::endl;
     }
   }
@@ -739,10 +740,10 @@ vec interpPhase(vec pilotFFT, double pilot_pos[], int nPilot, int nElem){
   for (int i=lPilot+2;i<nPilot; i++){
     int deltaI=pilotP(i+1)-pilotP(i);
     //std::cout <<i<<  " delta " <<deltaI << std::endl;
-    double step=(mod(pilotFFTd(i)+M_PI,2*M_PI)-M_PI)/deltaI;// Difference in phase
+    double step=(modP(pilotFFTd(i)+M_PI,2*M_PI)-M_PI)/deltaI;// Difference in phase
     //std::cout << step << std::endl;
     for (int ii=0;ii<deltaI; ii++ ){
-      out.set(pilotP(i)+ii,mod(pilotFFTp(i)+ii*step+M_PI,2*M_PI)-M_PI );
+      out.set(pilotP(i)+ii,modP(pilotFFTp(i)+ii*step+M_PI,2*M_PI)-M_PI );
       //std::cout << out<<std::endl;
     }  
   }
@@ -980,12 +981,12 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
    
    std::cout<<" Pilot Gain and Phase filtered - checked!\n\n";
 
-   std::cerr<<"Debugging exit!\n";
-   exit(1);
+ 
 
    //Channel Interpolation:
    
    itpp::vec gainInterp(nUsedCarrier), phaseInterp(nUsedCarrier);
+   
 
    for(int i1=0;i1<nSymbolsOFDM;i1++){
 
@@ -993,16 +994,22 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
      filtPilotGain.pop();
      phaseAux=filtPilotPhase.front();
      filtPilotPhase.pop();
-
-     gainInterp=interp( gainAux,pilotPattern,nUsedPilot,nUsedCarrier);
-     phaseInterp=interpPhase(phaseAux, pilotPattern, nUsedPilot, nUsedCarrier);
+    
+     gainInterp=interp( gainAux, pilotPattern,nUsedPilot, nCarriers);
+     phaseInterp=interpPhase(phaseAux, pilotPattern, nUsedPilot, nCarriers);
      
+
      filtPilotGain.push(gainInterp);
      filtPilotPhase.push(phaseInterp);
 
    }
 
-   std::cout<<"Pilot Gain and Phase interpolation done!\n\n";
+   saveQueue(filtPilotGain, nCarriers, (char*)"int_pilot_gain.dat");
+   saveQueue(filtPilotPhase, nCarriers, (char*)"int_pilot_phase.dat");
+
+   std::cout<<" Pilot Gain and Phase interpolation done - checked!\n\n";
+   
+  
 
    //Channel Correction
    complex<double> correct, phaseCorrect;
@@ -1017,21 +1024,28 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
      constOFDM.pop();
 
      //Correction of channel impulse responce:
-     for(int i2=0; i2<nUsedCarrier; i2++){
-       phaseCorrect=std::exp(complex<double>(1,phaseAux[i2]));
-       correct=dataAux[i2]/(gainInterp[i2]*phaseCorrect);
-       dataAux.set(i2,correct);	 
+     int n=0;
+     for(int i2=0; i2<nCarriers; i2++){
+       
+       if (dataPattern[n]-1==i2){
+	 phaseCorrect=std::exp(complex<double>(1,phaseInterp[i2]));
+	 correct=dataAux[n]/(gainInterp[i2]*phaseCorrect);
+	 dataAux.set(n,correct);
+	 n++;
+       }
      }
 
      constOFDM.push(dataAux);
-
    }
+
+   
   
-    std::cout<<"Channel Impulse response corrected!\n\n";
+    std::cout<<" Channel Impulse response corrected - checked!\n\n";
  
 
    //Detection
-    
+   
+   nDataB=2*nUsedCarrier*nSymbolsOFDM;
    complex<double> DataFilt[nUsedCarrier*nSymbolsOFDM]; 
    int count=0;
     for(int i1=0;i1<nSymbolsOFDM;i1++){
@@ -1049,14 +1063,22 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
 
    }
 
+    
 
    hardDetect(DataFilt, data_bin, nDataB);
 
+   //for(int i=0; i<nDataB; i++)DispVal(data_bin[i]);
 
-   std::cout << " Detected! " << std::endl;
+   // Save data to file
+     std::ofstream ofs1( "dataBin.dat" , std::ifstream::out );
+     ofs1.write((char * )data_bin, nDataB*sizeof(short));
+     ofs1.close();
+
+
+   std::cout << " Detected - checked! " << std::endl;
 
    std::cout << " " << std::endl;
-   std::cout << " Done! " << std::endl;
+   std::cout << " Processing Done! " << std::endl;
 
    return;
 

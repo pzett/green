@@ -6,7 +6,7 @@ close all;
 
 % Read data from file
 load('rx_data_23.mat')
-
+load('tx_data_for_inter.mat')
 
 figure(1)
 subplot(4,2,1)
@@ -145,6 +145,49 @@ system(cmd_str);
         count=count+1;
     end
  end
+ 
+ 
+ %load interp Pilot gain:
+  
+ fid=fopen('int_pilot_gain.dat','r');
+ temp=fread(fid,128*562,'double');
+ fclose(fid); 
+
+ count=1; 
+ int_pilot_gain=zeros(562,128);
+ for i=1:562
+    for k=1:128
+        int_pilot_gain(i,k)=temp(count);   
+        count=count+1;
+    end
+ end
+ 
+ %load interp Phase gain:
+  
+ fid=fopen('int_pilot_phase.dat','r');
+ temp=fread(fid,128*562,'double');
+ fclose(fid); 
+
+ count=1; 
+ int_pilot_phase=zeros(562,128);
+ for i=1:562
+    for k=1:128
+        int_pilot_phase(i,k)=temp(count);   
+        count=count+1;
+    end
+ end
+ 
+  %load binary data:
+  
+ fid=fopen('dataBin.dat','r');
+ temp=fread(fid, 2*89*562,'short');
+ fclose(fid); 
+
+
+ rx_data_bin=temp;
+ 
+ BER=sum(abs(data.'-rx_data_bin))/length(rx_data_bin)
+ 
  
 %   figure(1)
 %   subplot(4,2,4)
