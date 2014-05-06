@@ -17,6 +17,7 @@ using namespace std;
 using namespace itpp;
 
 extern void tx_funct(short output[]);
+extern void tx_funct_hcrs(short output[]);
 
 cvec dataAlloc (cvec data_qam, std::complex<double> data_pilot[], double pilot_pattern[], double data_pattern[], int N){
 
@@ -58,12 +59,7 @@ cvec prePost (cvec data_time, int pre, int post){
 }
 
 
-
-
-
-
-
-cvec serial2serial (cvec data_qam,std::complex<double> data_pil[],double data_pattern[], double pilot_pattern[],int N, int nUsedC, int nPilotC, int pre, int post, bool firstDone){
+cvec serial2serial (cvec data_qam,std::complex<double> data_pil[],double data_pattern[], double pilot_pattern[],int N, int nUsedC, int nPilotC, int pre, int post){
 
     cvec data_alloc=dataAlloc(data_qam,data_pil,pilot_pattern,data_pattern,N);
     
@@ -129,7 +125,6 @@ void tx_funct(short output[]){
   // }
 
   //Serial2Serial
-  bool firstDone=false;
   cvec shortBuffer(nUsedC);
   std::complex<double> shortPilot[nPilotC];
   for(int i=0;i<nQAM;){
@@ -140,11 +135,10 @@ void tx_funct(short output[]){
       }         
       else {shortBuffer.set(j,dataMapped.get(i++));}
     }
-    
     for(int j=0;j<nPilotC;j++){
       shortPilot[j]=pilotComp[(i/nUsedC-1)*nPilotC+j];
     }
-    cvec shortFrame=serial2serial(shortBuffer, shortPilot,data_pattern,pilot_pattern,nCar, nUsedC, nPilotC,pre,post,firstDone);
+    cvec shortFrame=serial2serial(shortBuffer, shortPilot,data_pattern,pilot_pattern,nCar, nUsedC, nPilotC,pre,post);
     outBuffer.ins(outBuffer.length(),shortFrame);
   }
   std::cout << "- serial2serial - check!" << std::endl;
@@ -183,3 +177,6 @@ void tx_funct(short output[]){
     std::cout << "- done - check!" << std::endl;
 
 }
+
+
+

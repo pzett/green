@@ -318,9 +318,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
       ofs.write((char * ) buffer, 2*total_num_samps*sizeof(short));
       ofs.close();
 
-      for(int i=60;i<200;i++){
-	std::cout << buffer[i] << std::endl;
-      }
+      // for(int i=60;i<200;i++){
+      // 	std::cout << buffer[i] << std::endl;
+      // }
     
       std::cout << "\nData only sent once \n";
 
