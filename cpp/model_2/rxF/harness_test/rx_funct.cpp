@@ -688,7 +688,7 @@ vec interp(vec pilotFFT, double pilot_pos[], int nPilot, int nElem){
 
 /** IDEM interp but with periodicity of the phase taking into account.
  *
- */
+ *
 vec interpPhase(vec pilotFFT, double pilot_pos[], int nPilot, int nElem){
   // Search the highest frequency pilot
   int lPilot=0;
@@ -748,7 +748,71 @@ vec interpPhase(vec pilotFFT, double pilot_pos[], int nPilot, int nElem){
     }  
   }
   return out;
+}*/
+/** IDEM interp but with periodicity of the phase taking into account.
+ *
+ */
+vec interpPhase(vec pilotFFT, double pilot_pos[], int nPilot, int nElem){
+  // Search the highest frequency pilot
+  int lPilot=0;
+  for (; lPilot<nPilot && pilot_pos[lPilot]< (nElem/2); lPilot++){ }
+  lPilot--;
+
+
+  // Create cyclic extension of pilot position
+  vec pilotP( pilot_pos, nPilot);
+  pilotP.ins(0, pilotP.right(1)-nElem);
+  //std::cout << pilotP << std::endl;
+  //Create a cyclic extension of pilotFFT
+  vec pilotFFTp=pilotFFT; 
+  pilotFFTp.ins(0, pilotFFTp.right(1));
+
+  // Evaluate the delta amplitude
+  pilotFFT.ins(pilotFFT.length(),pilotFFT.left(1));
+  //std::cout << pilotFFT << std::endl;
+  //std::cout << pilotFFTp << std::endl;
+  vec pilotFFTd=pilotFFT-pilotFFTp;
+  //std::cout << pilotFFTd << std::endl;
+
+  // Create the ouput vector
+  vec out(nElem);
+  // Fill the higher frequencies
+  for (int i=0; i<lPilot+1; i++){//+1 because of the periodisation
+    int deltaI=pilotP(i+1)-pilotP(i);// Difference in index
+    //std::cout <<i<<  " delta " <<deltaI << std::endl;
+ 
+    double step=(modP(pilotFFTd(i)+M_PI,2*M_PI)-M_PI)/deltaI;// Difference in phase
+  
+    //std::cout << step << std::endl;
+    for (int ii=0;ii<deltaI; ii++ ){
+      out.set(modP((pilotP(i)+ii),(double) nElem), modP(pilotFFTp(i)+ii*step+M_PI,2*M_PI)-M_PI);
+      //std::cout << out << std::endl;
+    }
+  }
+  //std::cout << out<<std::endl;
+  // Fill the frequencies around DC
+  for(int i=pilotP(lPilot+1);i<nElem/2;i++ ){
+    out.set(i, modP(pilotFFTp(lPilot+1)+M_PI,2*M_PI)-M_PI);
+    //std::cout << out<<std::endl;
+  }
+  for(int i=pilotP(lPilot+2);i>=nElem/2;i-- ){
+    out.set(i, modP(pilotFFTp(lPilot+2)+M_PI,2*M_PI)-M_PI);
+    //std::cout << out<<std::endl;
+  }
+  // Fill the low freq
+  for (int i=lPilot+2;i<nPilot; i++){
+    int deltaI=pilotP(i+1)-pilotP(i);
+    //std::cout <<i<<  " delta " <<deltaI << std::endl;
+    double step=(modP(pilotFFTd(i)+M_PI,2*M_PI)-M_PI)/deltaI;// Difference in phase
+    //std::cout << step << std::endl;
+    for (int ii=0;ii<deltaI; ii++ ){
+      out.set(pilotP(i)+ii,modP(pilotFFTp(i)+ii*step+M_PI,2*M_PI)-M_PI );
+      //std::cout << out<<std::endl;
+    }  
+  }
+  return out;
 }
+
 
 
 ///////////////////////////////////////MAIN FUNCTION////////////////////////////////////////////////////////////
@@ -986,7 +1050,11 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
    //Channel Interpolation:
    
    itpp::vec gainInterp(nUsedCarrier), phaseInterp(nUsedCarrier);
-   
+
+   double pilotPat[nUsedPilot];
+
+   for(int i=0;i<nUsedPilot;i++)pilotPat[i]=pilotPattern[i]-1;
+
 
    for(int i1=0;i1<nSymbolsOFDM;i1++){
 
@@ -995,8 +1063,8 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
      phaseAux=filtPilotPhase.front();
      filtPilotPhase.pop();
     
-     gainInterp=interp( gainAux, pilotPattern,nUsedPilot, nCarriers);
-     phaseInterp=interpPhase(phaseAux, pilotPattern, nUsedPilot, nCarriers);
+     gainInterp=interp( gainAux, pilotPat,nUsedPilot, nCarriers);
+     phaseInterp=interpPhase(phaseAux, pilotPat, nUsedPilot, nCarriers);
      
 
      filtPilotGain.push(gainInterp);
@@ -1028,10 +1096,21 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
      for(int i2=0; i2<nCarriers; i2++){
        
        if (dataPattern[n]-1==i2){
-	 phaseCorrect=std::exp(complex<double>(1,phaseInterp[i2]));
+	
+	 phaseCorrect=std::exp(complex<double>(0,phaseInterp[i2]));
 	 correct=dataAux[n]/(gainInterp[i2]*phaseCorrect);
+	 
+	
+	 if(n==0 && i1==0){
+	    DispVal(i2);
+	    DispVal(n);
+	    DispVal(dataAux[n]);
+	    DispVal(phaseInterp[i2]);
+	    DispVal(gainInterp[i2]);
+	    DispVal(correct);
+	 }
 	 dataAux.set(n,correct);
-	 n++;
+	  n++;
        }
      }
 
@@ -1064,9 +1143,20 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
 
    }
 
-    
+    //  cvec toDemo=arrayToCvec(DataFilt, nDataB/2);
 
-   hardDetect(DataFilt, data_bin, nDataB);
+   //  QAM qam(4);
+   //  bvec bits=qam.demodulate_bits(toDemo);
+   //  //hardDetect(DataFilt, data_bin, nDataB/2);
+
+   
+   // //for(int i=0; i<nDataB; i++)DispVal(data_bin[i]);
+   //  for(int i=0; i<nDataB;i++){
+   //    data_bin[i]=(short)bits[i];
+   //  }
+
+
+    hardDetect(DataFilt, data_bin, nDataB);
 
    //for(int i=0; i<nDataB; i++)DispVal(data_bin[i]);
 

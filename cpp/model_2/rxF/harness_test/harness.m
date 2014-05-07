@@ -7,6 +7,9 @@ close all;
 % Read data from file
 load('rx_data_23.mat')
 load('tx_data_for_inter.mat')
+%load('testCPP.mat')
+
+%rx_data_23=received_data;
 
 figure(1)
 subplot(4,2,1)
@@ -193,7 +196,7 @@ system(cmd_str);
   
   figure(2)
   subplot(2,1,2)
-  surf(int_pilot_phase)
+  surf(int_pilot_phase(1:end,:))
  
   %load OFDM symbols corrected and without CP:
   
@@ -215,6 +218,9 @@ system(cmd_str);
   plot(reshape(data_qpsk,1,89*562),'.b')
   title('OFDM QPSK received constellation')
  
+  figure(3)
+  plot(reshape(data_qpsk,1,89*562),'.b')
+  
   %load binary data:
   
  fid=fopen('dataBin.dat','r');

@@ -40,6 +40,7 @@
 #include <uhd/types/clock_config.hpp>
 
 #include "rx_funct.cpp"
+#include "filter.cpp"
 
 
 //#include <gruel/realtime.h>
@@ -74,6 +75,7 @@ namespace po = boost::program_options;
 float powerTotArray( short data[], int no_elements){
   float power=0;
   float tmp;
+  
   for (int i=0;i<no_elements;i++){
     tmp= (float) data[i];
     power= power+(tmp*tmp)/(no_elements/2);
@@ -88,15 +90,13 @@ float powerTotArray( short data[], int no_elements){
 // Processing thread nStorage: size of the array
 void processing(short *data,int nStorage, int name){
   short *data_bin;
-  int nDataB=18760;
+  int nDataB=100036;
   data_bin=new short[nDataB];
  
     std::this_thread::yield();
     //Do something heavy with data:
-    
-    //Process online data:
 
-    receiverSignalProcessing(data, nStorage, data_bin, nDataB);
+    DispVal(nStorage);
 
     // Save data received to file
     string s1= "received"+std::to_string(name) +".dat" ;
@@ -104,9 +104,14 @@ void processing(short *data,int nStorage, int name){
     ofs.write((char * ) data, nStorage*sizeof(short));
     ofs.close();
     //std::cout << "Finish Writing to file\n";
+    
+    //Process online data:
 
+    receiverSignalProcessing(data, nStorage, data_bin, nDataB);
 
+    
     std::cout << "Data Received and Processed!\n";
+    exit(1);
 
      // Save decoded data to file
      string s2= "decoded"+std::to_string(name) +".dat" ;
@@ -141,7 +146,7 @@ void usrpGetData(uhd::rx_streamer::sptr rx_stream, uhd::usrp::multi_usrp::sptr d
  
   size_t n_rx_last;
   uhd::rx_metadata_t md;
-  //int time=buffer_size/(25)-100; // microsecondes
+  //int time=buffer_size/(25)-100; microsecondes
 
   while (1){
     n_rx_last=0;
@@ -237,7 +242,7 @@ void detection(uint nDetect, int nStorage){
 
       //Power threshold=200 150USRP2 count trns 10000 
 
-      if (power>150&& count_trans>10000){
+      if (power>200&& count_trans>10000 && count<1){
 	// If detection, keep the element
 	std::cout<<"Detected Transmission\n";
 	//exit(1);
@@ -299,10 +304,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
   po::options_description desc("Allowed options");
   desc.add_options()
     ("help", "help message")
-    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(37960), "total number of samples to receive")
+    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(86000), "total number of samples to receive")
     ("rxrate", po::value<double>(&rx_rate)->default_value(100e6/4), "rate of incoming samples")
     ("freq", po::value<double>(&freq)->default_value(5.5e9), "rf center frequency in Hz")
-    ("LOoffset", po::value<double>(&LOoffset)->default_value(10e6), "Offset between main LO and center frequency")
+    ("LOoffset", po::value<double>(&LOoffset)->default_value(0), "Offset between main LO and center frequency")
     ("10MHz",po::value<bool>(&use_external_10MHz)->default_value(false), "external 10MHz on 'REF CLOCK' connector (true=1=yes)")
     ("filename",po::value<std::string>(&filename)->default_value("data_from_usrp.dat"), "output filename") 
     ("gain",po::value<float>(&gain)->default_value(15), "set the receiver gain") 

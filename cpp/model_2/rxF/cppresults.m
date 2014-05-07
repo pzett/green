@@ -8,15 +8,28 @@ close all;
 load('rx_data_23.mat')
 load('tx_data_for_inter.mat')
 
+
+N_samps=2*86000;
+fid1=fopen('received0.dat','r');
+x_rec=fread(fid1, N_samps,'short');
+fclose(fid1);
+
+received_data= zeros(1,N_samps/2);
+count = 1;
+for i=1:2:N_samps
+    received_data(count) = complex(x_rec(i),x_rec(i+1));
+    count = count+1;
+end
+
+save('testCPP.mat','received_data')
+
 figure(1)
 subplot(4,2,1)
-plot(real(rx_data_23))
-title('Data for test')
+plot(real(received_data))
+title('Data received')
 subplot(4,2,2)
-semilogy(abs(fft(rx_data_23)))
+semilogy(abs(fft(received_data)))
 title('Data fft')
-
-
 
 
   %load cross correlation:  
@@ -148,7 +161,8 @@ title('Data fft')
 
   figure(2)
   subplot(2,1,1)
-  surf(int_pilot_gain)
+  surf(20*log10(int_pilot_gain))
+  title('gain (dB scale)')
  
  %load interp Phase gain:
   
@@ -167,7 +181,7 @@ title('Data fft')
  
   figure(1)
   subplot(4,2,6)
-  plot(int_pilot_phase(1,:))
+  stem(int_pilot_phase(1,:))
   title('Channel Phase Estimation')
   
   figure(2)
@@ -191,9 +205,12 @@ title('Data fft')
  
   figure(1)
   subplot(4,2,7)
-  plot(reshape(data_qpsk,1,89*562),'.b')
+  plot(reshape(data_qpsk(20:end,:),1,89*543),'.b')
   title('OFDM QPSK received constellation')
  
+  figure(3)
+  plot(reshape(data_qpsk(20:end,1:46),1,24978),'.b')
+  
   %load binary data:
   
  fid=fopen('dataBin.dat','r');
@@ -210,6 +227,6 @@ title('Data fft')
  figure(1)
   subplot(4,2,8)
   plot(error)
-  title('OFDM QPSK received constellation')
+  title('BER')
 
 
