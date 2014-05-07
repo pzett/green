@@ -1,15 +1,16 @@
 close all;
 fid1=fopen('sent.dat','r');
-x=fread(fid1,8000,'short');
+x=fread(fid1,82682*2,'short');
 fclose(fid1);
 
-xComplex1= zeros(1,4000);
+xComplex2= zeros(1,82682);
 count = 1;
-for i=1:2:4000*2
-    xComplex1(count) = complex(x(i),x(i+1));
+for i=1:2:82682*2
+    xComplex2(count) = complex(x(i),x(i+1));
     count = count+1;
 end
 
+xComplex2=conj(xComplex2)';
 % figure()
 % plot(real(xComplex));
 

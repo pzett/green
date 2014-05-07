@@ -79,7 +79,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     ("help", "help message")
     ("args", po::value<std::string>(&args)->default_value(""), "simple uhd device address args")
     ("secs", po::value<double>(&seconds_in_future)->default_value(3), "number of seconds in the future to transmit")
-    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(8479), "total number of samples to transmit")
+    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(82682), "total number of samples to transmit")
     ("txrate", po::value<double>(&tx_rate)->default_value(100e6/4), "rate of outgoing samples")
     ("freq", po::value<double>(&freq)->default_value(5.5e9), "rf center frequency in Hz")
     ("LOoffset", po::value<double>(&LOoffset)->default_value(0), "Offset between main LO and center frequency")
@@ -132,8 +132,9 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     int r=fread(buffer, sizeof(uint32_t),total_num_samps, fp);
     printf("r=%d \n",r);
     fclose(fp);
-      
+
     printf("USING MATLAB DATA!\n");
+
 
   }else{
 
@@ -163,13 +164,13 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
   };
 
   // Take the conjugate if the datas do not come from matlab
-  if(!readFile){
+  //if(!readFile){
     //Conjugate!!!
     for(int i=0; i<(int)(total_num_samps);i++){
       buffer[i]=std::conj(buffer[i]);
     }
     std::cout<<"Conj!\n";
-  }
+    // }
 
   //////////////////////////DO NOT MODIFY THE FOLLOWING PART///////////////////////////////////////////////
 
@@ -280,7 +281,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     md.end_of_burst = false;
     md.has_time_spec = false;
       
-    std::cout << buffer[100] << std::endl; 
+    //std::cout << buffer[100] << std::endl; 
     //send the entire buffer, let the driver handle fragmentation
     tx_stream->send(buffer,2*total_num_samps,md,60);
       
@@ -307,20 +308,24 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
       md.start_of_burst = true;
       md.end_of_burst = false;
       md.has_time_spec = false;
- 
-      DispVal(total_num_samps);
-      tx_stream->send(buffer,2*total_num_samps,md,60);
-      md.start_of_burst = false;
+    
+      // for(int i=82000;i<82682;i++){
+      // 	std::cout << buffer[i] << std::endl;
+      // }
       
+ 
+      //    for(int i=82000;i<82682;i++){
+      // 	std::cout << buffer[i] << std::endl;
+      // }
+      DispVal(total_num_samps);
+      tx_stream->send(buffer,2*total_num_samps,md,60);//half 
+      md.start_of_burst = false;
 
       //   // Save data to file to check what was sent
       std::ofstream ofs( "sent.dat" , std::ifstream::out );
       ofs.write((char * ) buffer, 2*total_num_samps*sizeof(short));
       ofs.close();
 
-      // for(int i=60;i<200;i++){
-      // 	std::cout << buffer[i] << std::endl;
-      // }
     
       std::cout << "\nData only sent once \n";
 
