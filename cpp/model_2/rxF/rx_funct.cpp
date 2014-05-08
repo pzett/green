@@ -5,6 +5,9 @@
 #include <cmath>     
 #include <string>
 
+#include <ctime>
+#include <stdlib.h> 
+
 #include <itpp/itbase.h>
 #include <itpp/itcomm.h> 
 #include <itpp/stat/misc_stat.h>
@@ -18,7 +21,7 @@ using namespace itpp;
 
 #define M_PI 3.14159265358979323846
 
-extern void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[], int nDataC);
+//extern void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[], int nDataC);
 
 
 /** Make hard decision based on QPSK constellation
@@ -688,69 +691,6 @@ vec interp(vec pilotFFT, double pilot_pos[], int nPilot, int nElem){
 
 /** IDEM interp but with periodicity of the phase taking into account.
  *
- *
-vec interpPhase(vec pilotFFT, double pilot_pos[], int nPilot, int nElem){
-  // Search the highest frequency pilot
-  int lPilot=0;
-  for (; lPilot<nPilot && pilot_pos[lPilot]< (nElem/2); lPilot++){ }
-  lPilot--;
-
-
-  // Create cyclic extension of pilot position
-  vec pilotP( pilot_pos, nPilot);
-  pilotP.ins(0, pilotP.right(1)-nElem);
-  //std::cout << pilotP << std::endl;
-  //Create a cyclic extension of pilotFFT
-  vec pilotFFTp=pilotFFT; 
-  pilotFFTp.ins(0, pilotFFTp.right(1));
-
-  // Evaluate the delta amplitude
-  pilotFFT.ins(pilotFFT.length(),pilotFFT.left(1));
-  //std::cout << pilotFFT << std::endl;
-  //std::cout << pilotFFTp << std::endl;
-  vec pilotFFTd=pilotFFT-pilotFFTp;
-  //std::cout << pilotFFTd << std::endl;
-
-  // Create the ouput vector
-  vec out(nElem);
-  // Fill the higher frequencies
-  for (int i=0; i<lPilot+1; i++){//+1 because of the periodisation
-    int deltaI=pilotP(i+1)-pilotP(i);// Difference in index
-    //std::cout <<i<<  " delta " <<deltaI << std::endl;
- 
-    double step=(modP(pilotFFTd(i)+M_PI,2*M_PI)-M_PI)/deltaI;// Difference in phase
-  
-    //std::cout << step << std::endl;
-    for (int ii=0;ii<deltaI; ii++ ){
-      out.set(modP((pilotP(i)+ii),(double) nElem), modP(pilotFFTp(i)+ii*step+M_PI,2*M_PI)-M_PI);
-      //std::cout << out << std::endl;
-    }
-  }
-  //std::cout << out<<std::endl;
-  // Fill the frequencies around DC
-  for(int i=pilotP(lPilot+1);i<nElem/2;i++ ){
-    out.set(i, pilotFFTp(lPilot+1));
-    //std::cout << out<<std::endl;
-  }
-  for(int i=pilotP(lPilot+2);i>=nElem/2;i-- ){
-    out.set(i, pilotFFTp(lPilot+2));
-    //std::cout << out<<std::endl;
-  }
-  // Fill the low freq
-  for (int i=lPilot+2;i<nPilot; i++){
-    int deltaI=pilotP(i+1)-pilotP(i);
-    //std::cout <<i<<  " delta " <<deltaI << std::endl;
-    double step=(modP(pilotFFTd(i)+M_PI,2*M_PI)-M_PI)/deltaI;// Difference in phase
-    //std::cout << step << std::endl;
-    for (int ii=0;ii<deltaI; ii++ ){
-      out.set(pilotP(i)+ii,modP(pilotFFTp(i)+ii*step+M_PI,2*M_PI)-M_PI );
-      //std::cout << out<<std::endl;
-    }  
-  }
-  return out;
-}*/
-/** IDEM interp but with periodicity of the phase taking into account.
- *
  */
 vec interpPhase(vec pilotFFT, double pilot_pos[], int nPilot, int nElem){
   // Search the highest frequency pilot
@@ -873,7 +813,7 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
     //DispVal(tIni);
     int PostFix=1, PreFix=18;
     int nCarriers=128;
-    int nSymbolsOFDM=562;
+    int nSymbolsOFDM=200;
     
     std::queue<cvec> dataOFDM;
 
@@ -1032,14 +972,14 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
 
 
    //Kalman filter on the Gain:
-   std::queue<itpp::vec> filtPilotGain=kalmanGain (PilotGain,  nUsedPilot,  1, 1, 1, 0.001, 0.1,  x0Gain, 3);
+   std::queue<itpp::vec> filtPilotGain=PilotGain;//kalmanGain (PilotGain,  nUsedPilot,  1, 1, 1, 0.001, 1,  x0Gain, 10);
 
    //print(filtPilotGain);
    saveQueue(filtPilotGain, nUsedPilot, (char*)"filt_pilot_gain.dat");
 
 
    //Kalman filter in the Phase:
-   std::queue<itpp::vec> filtPilotPhase=kalmanPhase(PilotPhase, nUsedPilot, ("1 6.28318 ; 0 1"), ("1 0 ; 0 0"),("1 0"),("0.001 0; 0 0"), ("0.1"), x0Phase,("3 0 ; 0 9.8696"));
+   std::queue<itpp::vec> filtPilotPhase=PilotPhase;//kalmanPhase(PilotPhase, nUsedPilot, ("1 6.28318 ; 0 1"), ("1 0 ; 0 0"),("1 0"),("0.1 0; 0 0"), ("0.01"), x0Phase,("300000 0 ; 0 90000"));
 
    saveQueue(filtPilotPhase, nUsedPilot, (char*)"filt_pilot_phase.dat");
    
@@ -1117,7 +1057,7 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
 
    //Detection
    
-   nDataB=2*nUsedCarrier*nSymbolsOFDM;
+   
    complex<double> DataFilt[nUsedCarrier*nSymbolsOFDM]; 
    int count=0;
     for(int i1=0;i1<nSymbolsOFDM;i1++){
@@ -1135,9 +1075,9 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
 
    }
 
-     cvec toDemo=arrayToCvec(DataFilt, nDataB/2);
+    cvec toDemo=arrayToCvec(DataFilt, nDataB);
 
-    QAM qam(4);
+    QAM qam(16);
     bvec bits=qam.demodulate_bits(toDemo);
     //hardDetect(DataFilt, data_bin, nDataB/2);
 
@@ -1146,7 +1086,6 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
     for(int i=0; i<nDataB;i++){
       data_bin[i]=(short)bits[i];
     }
-
 
    // hardDetect(DataFilt, data_bin, nDataB);
 

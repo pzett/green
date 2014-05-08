@@ -39,7 +39,7 @@
 #include <cmath>
 #include <uhd/types/clock_config.hpp>
 
-#include "rx_funct.cpp"
+#include "rx_funct.hpp"
 #include "filter.cpp"
 
 
@@ -90,7 +90,7 @@ float powerTotArray( short data[], int no_elements){
 // Processing thread nStorage: size of the array
 void processing(short *data,int nStorage, int name){
   short *data_bin;
-  int nDataB=100036;
+  int nDataB=35600*2;
   data_bin=new short[nDataB];
  
     std::this_thread::yield();
@@ -107,8 +107,17 @@ void processing(short *data,int nStorage, int name){
     
     //Process online data:
 
+    //std::clock_t c_start = std::clock();
+	 auto t_start = std::chrono::high_resolution_clock::now();
+
     receiverSignalProcessing(data, nStorage, data_bin, nDataB);
 
+    //std::clock_t c_end = std::clock();
+    auto t_end = std::chrono::high_resolution_clock::now();
+    std::cout << "Data Processed!\n";
+    std::cout << "Wall clock time passed: "
+              << std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count()
+              << " us\n";
     
     std::cout << "Data Received and Processed!\n";
     exit(1);
@@ -242,7 +251,7 @@ void detection(uint nDetect, int nStorage){
 
       //Power threshold=200 150USRP2 count trns 10000 
 
-      if (power>200&& count_trans>10000 && count<1){
+      if (power>250&& count_trans>10000 && count<1){
 	// If detection, keep the element
 	std::cout<<"Detected Transmission\n";
 	//exit(1);
@@ -304,7 +313,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
   po::options_description desc("Allowed options");
   desc.add_options()
     ("help", "help message")
-    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(86000), "total number of samples to receive")
+    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(2*86000), "total number of samples to receive")
     ("rxrate", po::value<double>(&rx_rate)->default_value(100e6/4), "rate of incoming samples")
     ("freq", po::value<double>(&freq)->default_value(5.5e9), "rf center frequency in Hz")
     ("LOoffset", po::value<double>(&LOoffset)->default_value(0), "Offset between main LO and center frequency")
