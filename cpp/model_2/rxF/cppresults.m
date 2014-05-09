@@ -187,7 +187,7 @@ title('Data fft')
   
   figure(2)
   subplot(2,1,2)
-  surf(int_pilot_phase(1:10,:))
+  surf(int_pilot_phase)
  
   %load OFDM symbols corrected and without CP:
   
@@ -211,18 +211,22 @@ title('Data fft')
  
   figure(3)
   %plot(reshape(data_qpsk(20:end,1:46),1,24978),'.b')
-  plot(reshape(data_qpsk(3:end,1:end),1,nr_used_car*nr_OFDM_symbols-2*nr_used_car),'.b') 
+  plot(reshape(data_qpsk(1:end,1:end),1,nr_used_car*nr_OFDM_symbols-0*nr_used_car),'.b') 
+  grid on
   %load binary data:
   
+ %Modulation=2;%QPSK
+ Modulation=4;%16-QAM
+  
  fid=fopen('dataBin.dat','r');
- temp=fread(fid, 4*nr_used_car*nr_OFDM_symbols,'short');
+ temp=fread(fid, Modulation*nr_used_car*nr_OFDM_symbols,'short');
  fclose(fid); 
  
  count=1; 
- data_B_cpp=zeros(nr_OFDM_symbols,4*nr_used_car);
- data_B_trans=zeros(nr_OFDM_symbols,4*nr_used_car);
+ data_B_cpp=zeros(nr_OFDM_symbols,Modulation*nr_used_car);
+ data_B_trans=zeros(nr_OFDM_symbols,Modulation*nr_used_car);
  for i=1:nr_OFDM_symbols
-    for k=1:4*nr_used_car
+    for k=1:Modulation*nr_used_car
         data_B_cpp(i,k)=temp(count);
         data_B_trans(i,k)=dataT(count);
         count=count+1;
@@ -235,7 +239,7 @@ title('Data fft')
 
  rx_data_bin=temp;
  
- error=(abs(dataT(1:4*nr_used_car*nr_OFDM_symbols).'-rx_data_bin));
+ error=(abs(dataT(1:Modulation*nr_used_car*nr_OFDM_symbols).'-rx_data_bin));
  BER=sum(error)/length(rx_data_bin)
  
  figure(1)
@@ -243,7 +247,7 @@ title('Data fft')
   plot(error)
   title('BER')
   
-  data_rate=(1-BER)*(length(rx_data_bin)/29468)*25;
+  data_rate=(1-BER)*(length(rx_data_bin)/30056)*25;
         ['Data rate: ', num2str(data_rate), 'Mbits/s']
 
 

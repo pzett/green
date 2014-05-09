@@ -809,7 +809,7 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
     
 
  //CP removal of OFDM symbols and FFT to get OFDM data:
-    int tIni=delay+Q*nTrainSeq; //Beginnig of OFDM data
+    int tIni=delay+Q*nTrainSeq+4*147; //Beginnig of OFDM data
     //DispVal(tIni);
     int PostFix=1, PreFix=18;
     int nCarriers=128;
@@ -920,7 +920,6 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
   }
   
   
-  
   //print(PilotGain);
   saveQueue(PilotGain, nUsedPilot, (char*) "rx_pilot_gain.dat");
   saveQueue(PilotPhase, nUsedPilot, (char*) "rx_pilot_phase.dat");
@@ -972,14 +971,14 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
 
 
    //Kalman filter on the Gain:
-   std::queue<itpp::vec> filtPilotGain=PilotGain;//kalmanGain (PilotGain,  nUsedPilot,  1, 1, 1, 0.001, 1,  x0Gain, 10);
+   std::queue<itpp::vec> filtPilotGain=kalmanGain (PilotGain,  nUsedPilot,  1, 1, 1, 0.001, 1,  x0Gain, 10);
 
    //print(filtPilotGain);
    saveQueue(filtPilotGain, nUsedPilot, (char*)"filt_pilot_gain.dat");
 
 
    //Kalman filter in the Phase:
-   std::queue<itpp::vec> filtPilotPhase=PilotPhase;//kalmanPhase(PilotPhase, nUsedPilot, ("1 6.28318 ; 0 1"), ("1 0 ; 0 0"),("1 0"),("0.1 0; 0 0"), ("0.01"), x0Phase,("300000 0 ; 0 90000"));
+   std::queue<itpp::vec> filtPilotPhase=kalmanPhase(PilotPhase, nUsedPilot, ("1 6.28318 ; 0 1"), ("1 0 ; 0 0"),("1 0"),("0.1 0; 0 0"), ("0.01"), x0Phase,("300000 0 ; 0 90000"));
 
    saveQueue(filtPilotPhase, nUsedPilot, (char*)"filt_pilot_phase.dat");
    
@@ -1105,4 +1104,5 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
    return;
 
 }
+
 
