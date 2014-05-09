@@ -79,7 +79,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     ("help", "help message")
     ("args", po::value<std::string>(&args)->default_value(""), "simple uhd device address args")
     ("secs", po::value<double>(&seconds_in_future)->default_value(3), "number of seconds in the future to transmit")
-    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(82682), "total number of samples to transmit")
+    ("nsamps", po::value<size_t>(&total_num_samps)->default_value(30056), "total number of samples to transmit")// 29909
     ("txrate", po::value<double>(&tx_rate)->default_value(100e6/4), "rate of outgoing samples")
     ("freq", po::value<double>(&freq)->default_value(5.5e9), "rf center frequency in Hz")
     ("LOoffset", po::value<double>(&LOoffset)->default_value(0), "Offset between main LO and center frequency")
@@ -88,10 +88,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
      "external 10MHz on 'REF CLOCK' connector (true=1=yes)")
     ("PPS",po::value<bool>(&trigger_with_pps)->default_value(false), 
      "trigger reception with 'PPS IN' connector (true=1=yes)")
-    ("filename",po::value<std::string>(&filename)->default_value("sent.dat"), "input filename")
+    ("filename",po::value<std::string>(&filename)->default_value("sentSuccessful.dat"), "input filename")
     ("gain",po::value<float>(&gain)->default_value(30), "gain of transmitter")
     ("8bits",po::value<bool>(&use_8bits)->default_value(false), "Use eight bits/sample to increase bandwidth")
-    ("readFile",po::value<bool>(&readFile)->default_value(true), "defines if program reads data from file or generate data itself")
+    ("readFile",po::value<bool>(&readFile)->default_value(false), "defines if program reads data from file or generate data itself")
     ;
 
     
@@ -110,12 +110,10 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
  
 
   //int outputSize =(1+ceil((nDataBin/(2*nBits))/nUsedC))*(nCar+pre+post)+2*nGuard+4*nTrain;
-  int nAll=total_num_samps*2;
-  short *all;
-  all = new short[nAll];
-
+ 
   std::complex<short> *buffer;
-  buffer = new std::complex<short> [nAll/2];
+  buffer = new std::complex<short> [total_num_samps];
+  short aux[2*total_num_samps];
 
 
   ////////////////// Create data to be transmitted ///////////////////////
@@ -136,26 +134,19 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     printf("USING MATLAB DATA!\n");
 
 
-  }else{
+  }
+  else{
 
   
     // Call the function creating the data
-    tx_funct(all);
+    tx_funct(aux);
 
-    // for(int i=0; i<(int)(2*total_num_samps);i++){
-    //   std::cout << "all["<<i<<"] = " << all[i]<<"\n";
-    // }
-    buffer= (std::complex<short> * ) all;
-
-    // for(int i=0; i<(int)(total_num_samps);i++){
-    //   DispVal(buffer[i]);
-    // }
-
-    //Write to file
-    FILE * xFile;
-    xFile = fopen("sent.dat","wb");
-    fwrite(buffer, 2*sizeof(short),nAll,xFile);
-    fclose(xFile);
+    for(int i=0,count=0;i<(int)(2*total_num_samps);i=i+2){
+      buffer[count]=std::complex<short>(aux[i],aux[i+1]);
+      count++;
+    }
+   
+    // fclose(xFile);
 
     //ATENTION:Always convert to complex<short> to send to the USRP transmitter
 
@@ -164,15 +155,18 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
   };
 
   // Take the conjugate if the datas do not come from matlab
-  //if(!readFile){
-    //Conjugate!!!
+  if(!readFile){
+  //Conjugate!!!
     for(int i=0; i<(int)(total_num_samps);i++){
       buffer[i]=std::conj(buffer[i]);
     }
     std::cout<<"Conj!\n";
-    // }
+    }
 
   //////////////////////////DO NOT MODIFY THE FOLLOWING PART///////////////////////////////////////////////
+   // for(int i=0; i<(int)(total_num_samps);i++){
+   //    std::cout << buffer[i] << std::endl;
+   //  }
 
   
   //create a USRP device and streamer
@@ -277,28 +271,39 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
       
     std::cout << "Stop the transmitter by pressing ctrl-c \n";
 
+    //FILE * pFile2;
+
     md.start_of_burst = true;
     md.end_of_burst = false;
     md.has_time_spec = false;
       
-    //std::cout << buffer[100] << std::endl; 
+    std::cout << buffer[58858] << std::endl; 
     //send the entire buffer, let the driver handle fragmentation
-    tx_stream->send(buffer,2*total_num_samps,md,60);
+    tx_stream->send(buffer,total_num_samps,md,60);
+
+    //pFile2 = fopen ("output.bin", "wb+");
+    //fwrite (buffer , sizeof(double), sizeof(buffer), pFile2);
       
     md.start_of_burst = false;
+    //int loopCount=0;
 
 
     while (1) {
 
-      tx_stream->send(buffer,2*total_num_samps,md,3);
+      tx_stream->send(buffer,total_num_samps,md,3);//3
+      //fwrite (buffer , sizeof(short),total_num_samps/** sizeof(buffer)*/, pFile2);
+ 
 
       md.start_of_burst = false;
       md.end_of_burst = false;
       md.has_time_spec = false;
 	
       std::cout << "Sending data in loop... \n";
+      //loopCount++;
 
     }
+    //fclose (pFile2);
+
   }
   else
     {
@@ -309,21 +314,32 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
       md.end_of_burst = false;
       md.has_time_spec = false;
     
-      // for(int i=82000;i<82682;i++){
+      // for(int i=15000;i<16000;i++){
       // 	std::cout << buffer[i] << std::endl;
-      // }
+      // }    
       
- 
-      //    for(int i=82000;i<82682;i++){
+      
+      // std::cout << " ... " << std::endl;
+      //    for(int i=29400;i<29478;i++){
       // 	std::cout << buffer[i] << std::endl;
       // }
+
       DispVal(total_num_samps);
-      tx_stream->send(buffer,2*total_num_samps,md,60);//half 
+      std::cout << "here" << std::endl;
+      tx_stream->send(buffer,2*total_num_samps,md,60);//half
+      
       md.start_of_burst = false;
 
-      //   // Save data to file to check what was sent
+      // FILE * pFile3;
+      // pFile3 = fopen ("output.bin", "wb+");
+      // fwrite (buffer , sizeof(short),2*total_num_samps, pFile3);
+      // fclose (pFile3);
+
+
+
+      // Save data to file to check what was sent
       std::ofstream ofs( "sent.dat" , std::ifstream::out );
-      ofs.write((char * ) buffer, 2*total_num_samps*sizeof(short));
+      ofs.write((char * ) aux, 2*total_num_samps*sizeof(short));
       ofs.close();
 
     

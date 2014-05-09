@@ -8,6 +8,8 @@
 #include <itpp/itsignal.h>
 #include <complex>
 #include <itpp/comm/modulator.h>
+#include <stdio.h> 
+#include <math.h>  
 
 
  /*
@@ -81,9 +83,9 @@ void tx_funct(short output[]){
   int nPilotC=10;
   int pre=18;
   int post=1;
-  int nDataBin=100036;
+  int nDataBin=71200;//35600;
   int nPilotData=5620;
-  int nBits=4;
+  int nBits=16;//4
   int firstDone=0;
 
   //Load data and initialization parameters
@@ -94,7 +96,7 @@ void tx_funct(short output[]){
   //ifs.flush();
   ifs.close();
 
-  //   for(int i=0;i<10;i++){
+  //   for(int i=0;i<nDataBin;i++){
   // std::cout << data_bin[i] << std::endl;
   // }
 
@@ -104,6 +106,7 @@ void tx_funct(short output[]){
   ifs3.read((char * )data_pattern,nUsedC*sizeof(double));
   //ifs3.flush();
   ifs3.close();
+
 
   //Read pilot pattern from a file
   double pilot_pattern[nPilotC];
@@ -124,12 +127,15 @@ void tx_funct(short output[]){
 
  //M-QAM mapping
   bvec dataBvec(nDataBin);
-  int nQAM=nDataBin/(log2(nBits)); 
+  int nQAM=nDataBin/(log2(nBits));
+  std::cout << nDataBin << std::endl; 
+  std::cout << nBits << std::endl;
+  std::cout << nQAM << std::endl;
   QAM md(nBits);
   cvec dataMapped(nQAM);
   for(int i=0;i<nDataBin;i++){
-    //  std::cout<< i << "->  " << data_bin[i] << std::endl;
     dataBvec.set(i,(bin) itpp::round(data_bin[i]) );
+    //std::cout<< i << "->  " << data_Mapp[i] << std::endl;
   }
  
 
@@ -138,7 +144,7 @@ void tx_funct(short output[]){
   md.modulate_bits(dataBvec,dataMapped);
   std::cout << "- mapping - check!" << std::endl;
   // for(int i=0;i<nQAM;i++){
-  // std::cout << dataMapped.get(i) << std::endl;
+  //   std::cout << dataMapped.get(i) << " " << i << std::endl;
   // }
 
   //Serial2Serial
@@ -180,6 +186,13 @@ void tx_funct(short output[]){
       cvecTrain.ins(cvecTrain.length(),amp*trainTmp[m]);
       }
     }
+    //adding guard bits (pseudonoise) at ending of train seq
+    std::complex<double> guardTrain;
+    for(int i=0;i<147*4;i++){
+      guardTrain = itpp::randn_c()/10;
+      cvecTrain.ins(cvecTrain.length(),guardTrain);
+    }
+
     outBuffer.ins(0,cvecTrain);
     std::cout << "- training sequence added - check!" << std::endl;
   //Insert guard bits & convert to short
@@ -187,11 +200,12 @@ void tx_funct(short output[]){
      int w=0;
      double ampTotal=65000;
     fill_n(&output[0],nGuard,0);
+    std::cout<<outBuffer.length()<<std::endl;
     for(w=0;w<2*outBuffer.length();w++){
       std::complex<double> tmp= outBuffer.get(floor(w/2));
       output[w+nGuard]=(short) (ampTotal*(std::real(tmp)));
       output[++w+nGuard]=(short)( ampTotal*(std::imag(tmp)));
-      //std::cout << output[w-1] << ", " << output[w] << std::endl;
+      //std::cout << output[w-1] << ", " << output[w] << " -> " << w << std::endl;
     }
     fill_n(&output[w+nGuard],nGuard,0);
     std::cout << "- done - check!" << std::endl;
