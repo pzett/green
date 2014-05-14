@@ -87,7 +87,7 @@ void tx_funct(short output[]){
   int nPilotC=10;
   int pre=10;
   int post=1;
-  int nDataBin=10000;//35600;//71200
+  int nDataBin=100000;//35600;//71200
   int nPilotData=16000;
   int nBits=16;//4
   int firstDone=0;
