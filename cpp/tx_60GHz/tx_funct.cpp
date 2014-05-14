@@ -200,7 +200,7 @@ void tx_funct(short output[]){
     outBuffer.ins(0,cvecTrain);
     std::cout << "- training sequence added - check!" << std::endl;
   //Insert guard bits & convert to short
-     int nGuard=20;
+     int nGuard=2000;
      int w=0;
      double ampTotal=65000;
     fill_n(&output[0],nGuard,0);

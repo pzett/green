@@ -62,7 +62,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
       ("help", "help message")
       ("args", po::value<std::string>(&args)->default_value(""), "simple uhd device address args")
       ("secs", po::value<double>(&seconds_in_future)->default_value(3), "number of seconds in the future to transmit")
-      ("nsamps", po::value<size_t>(&total_num_samps)->default_value(49255), "total number of samples to transmit")
+      ("nsamps", po::value<size_t>(&total_num_samps)->default_value(49199), "total number of samples to transmit")
       ("txrate", po::value<double>(&tx_rate)->default_value(100e6/4), "rate of outgoing samples")
       ("freq", po::value<double>(&freq)->default_value(70e6), "rf center frequency in Hz")
       ("LOoffset", po::value<double>(&LOoffset)->default_value(0), "Offset between main LO and center frequency")
