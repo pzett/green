@@ -26,9 +26,12 @@
 #include <complex>
 #include <cstdio>
 #include "board_60GHz.hpp"
+#include "tx_funct.cpp"
+
 
 namespace po = boost::program_options;
 
+//extern void tx_funct(short output[]);
 
 int UHD_SAFE_MAIN(int argc, char *argv[]){
 
@@ -45,7 +48,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     size_t total_num_samps;
     double tx_rate, freq, LOoffset;
     float gain;
-    bool forever, use_8bits;
+    bool forever, readFile, use_8bits;
     bool use_external_10MHz; 
     std::string filename;
     uhd::tx_streamer::sptr tx_stream;
@@ -56,21 +59,22 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     //setup the program options
     po::options_description desc("Allowed options");
     desc.add_options()
-        ("help", "help message")
-        ("args", po::value<std::string>(&args)->default_value(""), "simple uhd device address args")
-        ("secs", po::value<double>(&seconds_in_future)->default_value(3), "number of seconds in the future to transmit")
-        ("nsamps", po::value<size_t>(&total_num_samps)->default_value(1000), "total number of samples to transmit")
-        ("txrate", po::value<double>(&tx_rate)->default_value(100e6/4), "rate of outgoing samples")
-        ("freq", po::value<double>(&freq)->default_value(70e6), "rf center frequency in Hz")
-        ("LOoffset", po::value<double>(&LOoffset)->default_value(0), "Offset between main LO and center frequency")
-        ("forever",po::value<bool>(&forever)->default_value(true), "run indefinetly")
-        ("10MHz",po::value<bool>(&use_external_10MHz)->default_value(false), 
-	     "external 10MHz on 'REF CLOCK' connector (true=1=yes)")
+      ("help", "help message")
+      ("args", po::value<std::string>(&args)->default_value(""), "simple uhd device address args")
+      ("secs", po::value<double>(&seconds_in_future)->default_value(3), "number of seconds in the future to transmit")
+      ("nsamps", po::value<size_t>(&total_num_samps)->default_value(49255), "total number of samples to transmit")
+      ("txrate", po::value<double>(&tx_rate)->default_value(100e6/4), "rate of outgoing samples")
+      ("freq", po::value<double>(&freq)->default_value(70e6), "rf center frequency in Hz")
+      ("LOoffset", po::value<double>(&LOoffset)->default_value(0), "Offset between main LO and center frequency")
+      ("forever",po::value<bool>(&forever)->default_value(true), "run indefinetly")
+      ("readFile",po::value<bool>(&readFile)->default_value(true), "generates the data at first")
+      ("10MHz",po::value<bool>(&use_external_10MHz)->default_value(false), 
+       "external 10MHz on 'REF CLOCK' connector (true=1=yes)")
       //("PPS",po::value<bool>(&trigger_with_pps)->default_value(false), 
       //      "trigger reception with 'PPS IN' connector (true=1=yes)")
-        ("filename",po::value<std::string>(&filename)->default_value("data_to_usrp.dat"), "input filename")
-        ("gain",po::value<float>(&gain)->default_value(13), "gain of transmitter(0-13) ")
-        ("8bits",po::value<bool>(&use_8bits)->default_value(false), "Use eight bits/sample to increase bandwidth")
+      ("filename",po::value<std::string>(&filename)->default_value("sent60GHz.dat"), "input filename")
+      ("gain",po::value<float>(&gain)->default_value(13), "gain of transmitter(0-13) ")
+      ("8bits",po::value<bool>(&use_8bits)->default_value(false), "Use eight bits/sample to increase bandwidth")
     ;
 
     
@@ -79,27 +83,40 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
 
+    
     //print the help message
     if (vm.count("help")){
-        std::cout << boost::format("tx %s") % desc << std::endl;
-        return ~0;
+      std::cout << boost::format("tx %s") % desc << std::endl;
+      return ~0;
     }
 
     /* Create buffer storage */
     std::complex<int16_t> *buffer;
     buffer = new std::complex<int16_t>[total_num_samps];
 
-
-    /* Read input from disc */
-    FILE *fp = 0;
-    fp = fopen(filename.c_str(), "rb");    
-    if (fp == 0){
+    if(readFile==true){
+      /* Read input from disc */
+      FILE *fp = 0;
+      fp = fopen(filename.c_str(), "rb");    
+      if (fp == 0){
 	perror(filename.c_str());
 	return 1;
+      }
+      int r=fread(buffer, sizeof(uint32_t),total_num_samps, fp);
+      printf("r=%d \n",r);
+      fclose(fp);
     }
-    int r=fread(buffer, sizeof(uint32_t),total_num_samps, fp);
-    printf("r=%d \n",r);
-    fclose(fp);
+    if(readFile==false){
+      short aux[2*total_num_samps];
+      tx_funct(aux);
+
+      for(int i=0,count=0;i<(int)(2*total_num_samps);i=i+2){
+	buffer[count]=std::complex<short>(aux[i],aux[i+1]);
+	count++;
+      }
+
+    }
+
 
 
     //create a usrp device and streamer
