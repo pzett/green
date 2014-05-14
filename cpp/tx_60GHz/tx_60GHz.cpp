@@ -72,7 +72,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
        "external 10MHz on 'REF CLOCK' connector (true=1=yes)")
       //("PPS",po::value<bool>(&trigger_with_pps)->default_value(false), 
       //      "trigger reception with 'PPS IN' connector (true=1=yes)")
-      ("filename",po::value<std::string>(&filename)->default_value("sent60GHz.dat"), "input filename")
+      ("filename",po::value<std::string>(&filename)->default_value("sent.dat"), "input filename")
       ("gain",po::value<float>(&gain)->default_value(13), "gain of transmitter(0-13) ")
       ("8bits",po::value<bool>(&use_8bits)->default_value(false), "Use eight bits/sample to increase bandwidth")
     ;
@@ -107,17 +107,17 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
       fclose(fp);
     }
     if(readFile==false){
-      short aux[2*total_num_samps];
-      tx_funct(aux);
+      //short aux[2*total_num_samps];
+      //tx_funct(aux);
 
-      for(int i=0,count=0;i<(int)(2*total_num_samps);i=i+2){
-	buffer[count]=std::complex<short>(aux[i],aux[i+1]);
-	count++;
-      }
+      //for(int i=0,count=0;i<(int)(2*total_num_samps);i=i+2){
+	//buffer[count]=std::complex<short>(aux[i],aux[i+1]);
+	//count++;
+      //}
       // Save data to file to check what was sent
-      std::ofstream ofs( "sent.dat" , std::ifstream::out );
-      ofs.write((char * ) aux, 2*total_num_samps*sizeof(short));
-      ofs.close();
+      //std::ofstream ofs( "sent.dat" , std::ifstream::out );
+      //ofs.write((char * ) aux, 2*total_num_samps*sizeof(short));
+      //ofs.close();
      
     }
 
