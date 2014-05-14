@@ -43,6 +43,12 @@
 //#include <gruel/realtime.h>
 #include "board_60GHz.hpp"
 
+/* added processing files */
+#include <cmath>
+
+#include "rx_funct.hpp"
+#include "filter.cpp"
+
 #define DispVal(X) std::cout << #X << " = " << X<< std::endl
 
 std::thread *detectionT, *usrpT;
@@ -80,40 +86,63 @@ float powerTotArray( short data[], int no_elements){
 
 // Processing thread nStorage: size of the array
 void processing(short *data,int nStorage, int name){
+  short *data_bin;
+  int nDataB=35600*2;
+  data_bin=new short[nDataB];
+  
+  std::this_thread::yield();
+  //Do something heavy with data:
+  
+  DispVal(nStorage);
+  
+  // Save data received to file
+  std::string s1= "received"+std::to_string(name) +".dat" ;
+  std::ofstream ofs(s1, std::ifstream::out );
+  ofs.write((char * ) data, nStorage*sizeof(short));
+  ofs.close();
+  //std::cout << "Finish Writing to file\n";
+  
+  auto t_start = std::chrono::high_resolution_clock::now(); // Timer
+  
+  //Process online data:
+  
+  //std::clock_t c_start = std::clock();
+  
+  receiverSignalProcessing(data, nStorage, data_bin, nDataB);
+  
+  //std::clock_t c_end = std::clock();
+  auto t_end = std::chrono::high_resolution_clock::now();
+  std::cout << "Data Processed!\n";
+  std::cout << "Wall clock time passed: "
+	    << std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count()
+	    << " us\n";
+  
+  std::cout << "Data Received and Processed!\n";
+   exit(1);
 
-    std::this_thread::yield();
+   // Save decoded data to file
+   string s2= "decoded"+std::to_string(name) +".dat" ;
+   std::ofstream ofs1( s2 , std::ifstream::out );
+   ofs1.write((char * ) data_bin, nDataB*sizeof(short));
+   ofs1.close();
 
- // Save data received to file
-    std::string s1= "received"+std::to_string(name) +".dat" ;
-    std::ofstream ofs(s1, std::ifstream::out );
-    ofs.write((char * ) data, nStorage*sizeof(short));
-    ofs.close();
-    std::cout << "Finish Writing to file\n";
-   
-    auto t_start = std::chrono::high_resolution_clock::now(); // Timer
-
-    //Process online data: Modify from her /////////////////////////////////////////////////////
-    float power=powerTotArray(data, nStorage);
-    std::cout << "Data received, packet number: " << name << " || Power received: " << power <<std::endl;
- 
-    // Process online data. Don't modify after here /////////////////////////////////////////////
-
-    // Timer line 
-    auto t_end = std::chrono::high_resolution_clock::now();
-    std::cout << "Wall clock time passed: "
-              << std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count()
-              << " us\n";
-
-    std::cout << "Data Received and Processed!\n";
-
-    std::this_thread::yield();
-    //Release the memory
-    delete[] (data);
+   std::this_thread::yield();
+   //Release the memory
+   delete[] (data);
   
 }
 
 // Thread to import data from the USRP !Size of the arrays in complex -> 2*buffer_size !
 void usrpGetData(uhd::rx_streamer::sptr rx_stream, uhd::usrp::multi_usrp::sptr dev, size_t buffer_size, board_60GHz_RX *my_60GHz_RX){
+  // Set priority of the thread
+  int which = PRIO_PROCESS;
+  id_t pid;
+  int priority = -20;
+  int ret;
+
+  pid = getpid();
+  ret = setpriority(which, pid, priority);
+  if(ret!=0){  std::cout << "Main priority went wrong in usrpT: " << ret << std::endl ;}
 
   // Create storage for a single buffer from USRP
   short *buff_short;
@@ -269,6 +298,7 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     size_t total_num_samps;
     double rx_rate, freq, LOoffset;
     bool use_external_10MHz;
+    bool realTime;
     double scaling_8bits;
     std::string filename;
     float gain;
@@ -282,21 +312,29 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     //setup the program options
     po::options_description desc("Allowed options");
     desc.add_options()
-        ("help", "help message")
-        ("nsamps", po::value<size_t>(&total_num_samps)->default_value(1000), "total number of samples to receive")
-        ("rxrate", po::value<double>(&rx_rate)->default_value(100e6/4), "rate of incoming samples")
-        ("freq", po::value<double>(&freq)->default_value(70e6), "rf center frequency in Hz")
-        ("LOoffset", po::value<double>(&LOoffset)->default_value(0), "Offset between main LO and center frequency")
-        ("10MHz",po::value<bool>(&use_external_10MHz)->default_value(false), "external 10MHz on 'REF CLOCK' connector (true=1=yes)")
+      ("help", "help message")
+      ("nsamps", po::value<size_t>(&total_num_samps)->default_value(2*49199), "total number of samples to receive")
+      ("rxrate", po::value<double>(&rx_rate)->default_value(100e6/4), "rate of incoming samples")
+      ("freq", po::value<double>(&freq)->default_value(70e6), "rf center frequency in Hz")
+      ("LOoffset", po::value<double>(&LOoffset)->default_value(0), "Offset between main LO and center frequency")
+      ("10MHz",po::value<bool>(&use_external_10MHz)->default_value(false), "external 10MHz on 'REF CLOCK' connector (true=1=yes)")
       //  ("PPS",po::value<bool>(&trigger_with_pps)->default_value(false), "trigger reception with 'PPS IN' connector (true=1=yes)")
-        ("filename",po::value<std::string>(&filename)->default_value("data_from_usrp.dat"), "output filename") 
-        ("gain",po::value<float>(&gain)->default_value(0), "set the receiver gain (0-15)") 
-        ("8bits_scaling",po::value<double>(&scaling_8bits)->default_value(0.0), 
-    "input scaling (invers) when 8bits is used, set to zero to get 16bits")
-    ;
+      ("filename",po::value<std::string>(&filename)->default_value("data_from_usrp.dat"), "output filename") 
+      ("gain",po::value<float>(&gain)->default_value(5), "set the receiver gain (0-15)") 
+      ("8bits_scaling",po::value<double>(&scaling_8bits)->default_value(0.0), 
+       "input scaling (invers) when 8bits is used, set to zero to get 16bits")
+      ("realTime",po::value<bool>(&realTime)->default_value(true), "receives in loop and compares with synch sequence")
+      ;
+
     po::variables_map vm;
     po::store(po::parse_command_line(argc, argv, desc), vm);
     po::notify(vm);
+
+    //print the help message
+    if (vm.count("help")){
+      std::cout << boost::format("rx %s") % desc << std::endl;
+      return ~0;
+    }
 
 
     dev_addr["addr0"]="192.168.10.2";
@@ -439,11 +477,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     if(pthread_setschedparam(usrpT.native_handle(), SCHED_FIFO, &sch)) {
         std::cout << "Failed to setschedparam: " << std::strerror(errno) << '\n';
     }
-    pthread_getschedparam(detectionT.native_handle(), &policy, &sch);
-    sch.sched_priority = 99;
-    if(pthread_setschedparam(detectionT.native_handle(), SCHED_FIFO, &sch)) {
-        std::cout << "Failed to setschedparam: " << std::strerror(errno) << '\n';
-    }
+    // pthread_getschedparam(detectionT.native_handle(), &policy, &sch);
+    // sch.sched_priority = 99;
+    // if(pthread_setschedparam(detectionT.native_handle(), SCHED_FIFO, &sch)) {
+    //     std::cout << "Failed to setschedparam: " << std::strerror(errno) << '\n';
+    // }
 
     std::cout << "Priority set"<< std::endl;
 
