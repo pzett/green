@@ -114,7 +114,11 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
 	buffer[count]=std::complex<short>(aux[i],aux[i+1]);
 	count++;
       }
-
+      // Save data to file to check what was sent
+      std::ofstream ofs( "sent.dat" , std::ifstream::out );
+      ofs.write((char * ) aux, 2*total_num_samps*sizeof(short));
+      ofs.close();
+     
     }
 
 
