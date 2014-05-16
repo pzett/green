@@ -6,12 +6,13 @@ close all;
 
 % Read data from file
 %load('rx_data_23.mat'
-load('tx_data_cpp1.mat')
-load('dData.mat')
+load('params.mat')
+%load('dData.mat')
 dataT = data;
+nr_OFDM_symbols = 147;
 
 
-N_samps=2*49199;
+N_samps=49199;
 fid1=fopen('received0.dat','r');
 x_rec=fread(fid1, 2*N_samps,'short');
 fclose(fid1);

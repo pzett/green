@@ -809,11 +809,11 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
     
 
  //CP removal of OFDM symbols and FFT to get OFDM data:
-    int tIni=delay+Q*nTrainSeq+4*75; //Beginnig of OFDM data
+    int tIni=delay+Q*nTrainSeq+4*46; //Beginnig of OFDM data
     //DispVal(tIni);
-    int PostFix=1, PreFix=10;
-    int nCarriers=64;
-    int nSymbolsOFDM=625;
+    int PostFix=4, PreFix=10;
+    int nCarriers=32;
+    int nSymbolsOFDM=148;
     
     std::queue<cvec> dataOFDM;
 
@@ -830,7 +830,7 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
  //Pick data corresponding to the different pattern
      
      //Read Pilot Patern from file: 
-  int nUsedPilot=8;
+  int nUsedPilot=6;
   double * pilotPattern;
   pilotPattern= new double[nUsedPilot];
   std::ifstream ifs1( "pilotPattern.dat" , std::ifstream::in );
@@ -845,7 +845,7 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
   
 
      //Read data Patern from file: 
-  int nUsedCarrier=40;
+  int nUsedCarrier=17;
   double * dataPattern;
   dataPattern= new double[nUsedCarrier];
   std::ifstream ifs2( "dataPattern.dat" , std::ifstream::in );
@@ -956,7 +956,7 @@ void receiverSignalProcessing(short buff_short[], int buffersize,short data_bin[
    itpp::mat aux(2,1);
 
    int m=0;
-   double gain, phase;
+   double gain,phase;
    for(int i=0;i<nCarriers;i++){
     if (pilotPattern[m]-1==i){	
       gain=std::abs(fftTheta[i]);

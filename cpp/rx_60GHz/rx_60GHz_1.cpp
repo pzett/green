@@ -313,14 +313,14 @@ int UHD_SAFE_MAIN(int argc, char *argv[]){
     po::options_description desc("Allowed options");
     desc.add_options()
       ("help", "help message")
-      ("nsamps", po::value<size_t>(&total_num_samps)->default_value(2*49199), "total number of samples to receive")
+      ("nsamps", po::value<size_t>(&total_num_samps)->default_value(2*9424), "total number of samples to receive")
       ("rxrate", po::value<double>(&rx_rate)->default_value(100e6/4), "rate of incoming samples")
       ("freq", po::value<double>(&freq)->default_value(70e6), "rf center frequency in Hz")
       ("LOoffset", po::value<double>(&LOoffset)->default_value(0), "Offset between main LO and center frequency")
       ("10MHz",po::value<bool>(&use_external_10MHz)->default_value(false), "external 10MHz on 'REF CLOCK' connector (true=1=yes)")
       //  ("PPS",po::value<bool>(&trigger_with_pps)->default_value(false), "trigger reception with 'PPS IN' connector (true=1=yes)")
       ("filename",po::value<std::string>(&filename)->default_value("data_from_usrp.dat"), "output filename") 
-      ("gain",po::value<float>(&gain)->default_value(5), "set the receiver gain (0-15)") 
+      ("gain",po::value<float>(&gain)->default_value(7), "set the receiver gain (0-15)") 
       ("8bits_scaling",po::value<double>(&scaling_8bits)->default_value(0.0), 
        "input scaling (invers) when 8bits is used, set to zero to get 16bits")
       ("realTime",po::value<bool>(&realTime)->default_value(true), "receives in loop and compares with synch sequence")
