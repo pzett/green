@@ -82,13 +82,13 @@ cvec serial2serial (cvec data_qam,std::complex<double> data_pil[],double data_pa
 
 void tx_funct(short output[]){
 
-  int nCar=64;
-  int nUsedC=40;
-  int nPilotC=10;
+  int nCar=32;
+  int nUsedC=17;
+  int nPilotC=6;
   int pre=10;
-  int post=1;
-  int nDataBin=100000;//35600;//71200
-  int nPilotData=16000;
+  int post=4;
+  int nDataBin=10000;//35600;//71200
+  int nPilotData=2516;
   int nBits=16;//4
   int firstDone=0;
 
