@@ -1,0 +1,106 @@
+file_str=['parameters', modulation_type,num2str(nr_carriers),'coding','.mat'];
+load(file_str)
+nr_OFDM_symbols = floor((nr_data_bits/rate-1)/(nr_used_car*nr_bits_x_symbol))+1;
+tic
+load('rx_data')
+plotspectrum(rx_data);
+[t_samp,phi_hat,gain_pilot_0, theta_est, sigma_sqr_noise_est]=sync_catch_channel(rx_data, train_seq, Q,length_past, length_fut);
+% plot(-1/2+1/length(tx_data):1/length(tx_data):1/2,10*log10(abs(fftshift(fft(theta_est,length(tx_data)))))+25,'g');
+t_start=t_samp+Q*nr_training_bits;
+t_end=t_start+(nr_car+length_cpre+length_suf)*nr_OFDM_symbols-1;
+rx_data_train=rx_data(t_samp:t_start-1);
+rx_data_train=filter(ones(Q,1),1,rx_data_train);
+rx_data_train=rx_data_train(Q:Q:end);
+received_data=rx_data(t_start:t_end);                                               % received data whithout TS
+rx_data_reshaped=reshape(received_data,nr_car+length_cpre+length_suf,nr_OFDM_symbols);    % received data, []
+pilot=[pilot pilot];
+pilot=pilot(:,1:nr_OFDM_symbols);
+train_seq_f=conv(ones(Q,1),filter(theta_est,1,upfirdn(train_seq,ones(Q,1),Q,1)));
+train_seq_f=train_seq_f(Q+1:Q:end);
+if strcmp(decoding_method, 'Kalman_lover')
+    [data_received_equalized, channel_est, channel_est_pilot] = Kalman_lovers_v2( rx_data_reshaped, train_seq_f, rx_data_train, phi_hat, nr_car, nr_used_car, length_cpre, length_suf, Q, car_pattern, pilot_pattern, pilot(:,1:nr_OFDM_symbols), nr_OFDM_symbols,length_pilot,gain_pilot_0,theta_est,length_past, length_fut);
+en
+if strcmp(decoding_method, 'interpolation_no_filtering')
+    [data_received_equalized, channel_est, channel_est_pilot] = interpolation_no_filtering( rx_data_reshaped, train_seq, rx_data_train, phi_hat, nr_car, nr_used_car, length_cpre, length_suf, Q, car_pattern, pilot_pattern, pilot, nr_OFDM_symbols,length_pilot);
+end
+figure(2)
+plot(reshape(data_received_equalized,1,size(data_received_equalized,1)*size(data_received_equalized,2)),'.r')
+%rx_data=reshape(data_received_equalized,1,size(data_received_equalized,1)*size(data_received_equalized,2));
+
+%Demodulation
+%should be modified in order to integrate the freauency offset: use an
+%estimation using cyclic prefix estimation
+% [rx_data] = OFDM_inv(rx_data_reshaped,nr_carriers, length_cpre,length_suf);
+%loglike=-Estim_logliklihood(data_received_equalized,channel_est,modulation_type,sigma_sqr_noise_est);
+loglike=-Estim_logliklihood_V3(data_received_equalized,channel_est,modulation_type,sigma_sqr_noise_est);
+
+
+if coding
+loglike_re=reshape(loglike,1,size(loglike,1)*size(loglike,2));
+%new desinterleaver here?
+loglike_re=loglike_re(PIinv_glob);
+
+L=length(loglike_re(1:nr_data_bits/rate));
+loglike_re=reshape(loglike_re(1:nr_data_bits/rate),(m_p1+m_p2+m_p3),L/(m_p1+m_p2+m_p3));
+loglike_1=reshape(loglike_re(1:m_p1,:),1,m_p1*L/(m_p1+m_p2+m_p3));
+loglike_2=zeros(leng_p*L/((m_p1+m_p2+m_p3)),1);
+loglike_2(logical(mask2==1))=reshape(loglike_re(m_p1+1:m_p1+m_p2,:),1,m_p2*L/(m_p1+m_p2+m_p3));
+loglike_3=zeros(leng_p*L/(m_p1+m_p2+m_p3),1);
+loglike_3(logical(mask3==1))=reshape(loglike_re(m_p1+m_p2+1:m_p1+m_p2+m_p3,:),1,m_p3*L/(m_p1+m_p2+m_p3));
+
+
+%loglike_2=upfirdn(reshape(loglike_re(17:19,:),1,L/22),Poncture2,length(Poncture2),1);
+%loglike_3=upfirdn(reshape(loglike_re(20:22,:),1,L/22),Poncture3,length(Poncture2),1);
+
+B1=loglike_1;
+gamma_pre=gamma_prei;
+gamma_pre(1:number_possible_transitions/2,:)=gamma_pre(1:number_possible_transitions/2,:)-ones(number_possible_transitions/2,1)*loglike_1;
+gamma_pre(number_possible_transitions/2+1:number_possible_transitions,:)= gamma_pre(number_possible_transitions/2+1:number_possible_transitions,:)+ones(number_possible_transitions/2,1)*loglike_1;
+
+
+
+
+A1=gamma_pre;
+iteration=1;
+test=1;
+count=0;
+while iteration<nr_iteration_max&&test&&count<3
+    
+    [uhat1 Loglike_inter1] = logBCJRdecoding2(loglike_2,number_input,number_output,memory,M_generatrice,terminated,coef_alpha_alpha,coef_alpha_gamma,coef_beta_beta,coef_beta_gamma,coef_m_alpha,coef_m_beta,s,A1,mask2);
+    
+    E1(1:number_possible_transitions/2,:)=mat*Loglike_inter1(1,:)+gamma_pre(1:number_possible_transitions/2,:)-A1(1:number_possible_transitions/2,:);
+    E1(number_possible_transitions/2+1:number_possible_transitions,:)=gamma_pre(number_possible_transitions/2+1:number_possible_transitions,:)-A1(number_possible_transitions/2+1:number_possible_transitions,:);
+    
+    for j=1:number_possible_transitions
+        A2(j,:)=E1(j,PI);
+    end
+    [uhat Loglike_inter2] = logBCJRdecoding2(loglike_3,number_input,number_output,memory,M_generatrice,terminated,coef_alpha_alpha,coef_alpha_gamma,coef_beta_beta,coef_beta_gamma,coef_m_alpha,coef_m_beta,s,A2,mask3);
+    test=sum(uhat~=uhat1);
+    if test
+        count=0;
+    end
+    E2(1:number_possible_transitions/2,:)=mat*Loglike_inter2(1,:)-A2(1:number_possible_transitions/2,:);
+    E2(number_possible_transitions/2+1:number_possible_transitions,:)=-A2(number_possible_transitions/2+1:number_possible_transitions,:);
+    
+    for j=1:number_possible_transitions
+        A1(j,:)=E2(j,PIinv);
+    end
+    A1=A1+gamma_pre;
+    uhat=uhat(PIinv);
+    iteration=iteration+1;
+    test=sum(uhat~=uhat1);
+    count=count+1;
+    if test
+        count=0;
+    end
+    iteration
+    rx_data_bits=uhat;
+end
+%Detection
+rx_info_dec=uhat;
+iteration
+else
+    rx_info_dec=(1+sign(loglike(1:nr_data_bits)))/2;
+end
+toc
+save('rx_info_dec','rx_info_dec')
